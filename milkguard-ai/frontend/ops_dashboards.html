@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>MilkGuard AI — Operations Console</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root{
+  --bg:#0B1220;
+  --panel:#111A2C;
+  --panel-2:#0E1626;
+  --line:#22304A;
+  --mint:#2F9E6E;
+  --mint-soft:rgba(47,158,110,.14);
+  --coral:#E4572E;
+  --coral-soft:rgba(228,87,46,.14);
+  --amber:#F2C14E;
+  --ink:#EAF0F7;
+  --ink-dim:#8FA0BE;
+  --ink-faint:#5A6C8A;
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+body{background:var(--bg); color:var(--ink); font-family:'Inter',sans-serif; min-height:100vh;}
+button{font-family:inherit; cursor:pointer;}
+input,select{font-family:inherit;}
+
+/* role switcher */
+.role-switch{
+  display:flex; gap:8px; align-items:center;
+  padding:14px 24px; background:var(--panel-2); border-bottom:1px solid var(--line);
+}
+.role-switch .label{font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.08em; margin-right:8px;}
+.role-pill{
+  padding:8px 18px; border-radius:20px; border:1px solid var(--line); background:transparent;
+  color:var(--ink-dim); font-size:13px; font-weight:600; transition:all .15s ease;
+}
+.role-pill.active{background:var(--mint); border-color:var(--mint); color:#04140C;}
+.role-pill:not(.active):hover{border-color:var(--mint); color:var(--ink);}
+
+.shell{display:flex; min-height:calc(100vh - 57px);}
+
+/* sidebar */
+.sidebar{
+  width:230px; background:var(--panel-2); border-right:1px solid var(--line);
+  padding:20px 14px; flex-shrink:0; display:flex; flex-direction:column;
+}
+.brand{display:flex; align-items:center; gap:10px; padding:4px 8px 22px;}
+.brand-mark{width:28px; height:28px; border-radius:8px; background:var(--mint); display:flex; align-items:center; justify-content:center; font-family:'Fraunces',serif; font-weight:700; font-size:14px; color:#04140C;}
+.brand-name{font-family:'Fraunces',serif; font-weight:600; font-size:16px;}
+
+.nav-item{
+  display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px;
+  color:var(--ink-dim); font-size:13.5px; font-weight:500; margin-bottom:2px; border:none; background:transparent; width:100%; text-align:left;
+}
+.nav-item svg{flex-shrink:0; opacity:.85;}
+.nav-item:hover{background:rgba(255,255,255,.04); color:var(--ink);}
+.nav-item.active{background:var(--mint-soft); color:var(--mint); font-weight:600;}
+.nav-item.active svg{opacity:1;}
+.nav-gap{flex:1;}
+.logout-item{color:var(--ink-faint); font-size:12.5px; padding:10px 12px; display:flex; align-items:center; gap:10px;}
+
+/* main content */
+.content{flex:1; padding:26px 32px; overflow-x:hidden;}
+.content-header{display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:22px;}
+.content-header h1{font-family:'Fraunces',serif; font-size:24px; font-weight:600;}
+.content-header .sub{color:var(--ink-dim); font-size:13px; margin-top:4px;}
+.user-chip{display:flex; align-items:center; gap:10px; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:8px 14px;}
+.user-chip .name{font-size:13px; font-weight:600;}
+.user-chip .role{font-size:11px; color:var(--ink-dim);}
+.avatar{width:30px; height:30px; border-radius:50%; background:var(--mint); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:12px; color:#04140C;}
+
+.btn{padding:9px 16px; border-radius:8px; border:none; font-size:13px; font-weight:600;}
+.btn-mint{background:var(--mint); color:#04140C;}
+.btn-mint:hover{opacity:.9;}
+.btn-outline{background:transparent; border:1px solid var(--line); color:var(--ink-dim);}
+.btn-outline:hover{border-color:var(--mint); color:var(--ink);}
+
+/* stat cards */
+.stats-row{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:20px;}
+.stat-card{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 18px;}
+.stat-card .lbl{font-size:12px; color:var(--ink-dim); margin-bottom:10px;}
+.stat-card .val{font-family:'Fraunces',serif; font-size:26px; font-weight:600;}
+.stat-card .delta{font-size:11.5px; margin-top:6px; color:var(--ink-faint);}
+.stat-card .delta.up{color:var(--mint);}
+.stat-card .delta.warn{color:var(--coral);}
+
+/* chart + side panel */
+.grid-2{display:grid; grid-template-columns:1.6fr 1fr; gap:14px; margin-bottom:20px;}
+.panel{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:18px 20px;}
+.panel h3{font-family:'Fraunces',serif; font-size:15px; font-weight:600; margin-bottom:2px;}
+.panel .sub{font-size:12px; color:var(--ink-dim); margin-bottom:14px;}
+.chart-wrap{position:relative;}
+.chart-wrap svg{width:100%; height:200px; display:block;}
+
+.side-list{display:flex; flex-direction:column; gap:10px;}
+.side-row{display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--line); font-size:12.5px;}
+.side-row:last-child{border-bottom:none;}
+.side-row .id{font-family:'IBM Plex Mono',monospace; color:var(--ink);}
+.side-row .meta{color:var(--ink-faint);}
+.empty-note{color:var(--ink-faint); font-size:12.5px; text-align:center; padding:36px 0;}
+
+/* table */
+table{width:100%; border-collapse:collapse;}
+thead th{text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-faint); padding:10px 12px; border-bottom:1px solid var(--line); font-weight:600;}
+tbody td{padding:12px; font-size:13px; border-bottom:1px solid var(--line); font-family:'IBM Plex Mono',monospace; color:var(--ink);}
+tbody tr:hover{background:rgba(255,255,255,.02);}
+.flag-pill{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:20px; font-family:'Inter',sans-serif; font-weight:600; font-size:11.5px;}
+.flag-pill.pure{background:var(--mint-soft); color:var(--mint);}
+.flag-pill.alert{background:var(--coral-soft); color:var(--coral);}
+.dot{width:6px; height:6px; border-radius:50%; background:currentColor;}
+
+.filter-row{display:flex; gap:8px; margin-bottom:14px;}
+.chip{padding:6px 14px; border-radius:16px; border:1px solid var(--line); background:transparent; color:var(--ink-dim); font-size:12px;}
+.chip.active{background:var(--mint-soft); border-color:var(--mint); color:var(--mint);}
+
+/* alerts view */
+.alert-item{display:flex; gap:14px; align-items:flex-start; background:var(--panel); border:1px solid var(--coral); border-left-width:3px; border-radius:10px; padding:14px 16px; margin-bottom:10px;}
+.alert-item .icon{width:32px; height:32px; border-radius:8px; background:var(--coral-soft); display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+.alert-item .body{flex:1;}
+.alert-item .title{font-size:13.5px; font-weight:600; margin-bottom:3px;}
+.alert-item .detail{font-size:12px; color:var(--ink-dim);}
+.alert-item .time{font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--ink-faint); white-space:nowrap;}
+
+/* settings */
+.settings-card{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:22px; max-width:480px;}
+.settings-row{display:flex; justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--line); font-size:13px;}
+.settings-row:last-child{border-bottom:none;}
+.settings-row .k{color:var(--ink-dim);}
+.settings-row .v{font-family:'IBM Plex Mono',monospace;}
+
+/* modal */
+.overlay{position:fixed; inset:0; background:rgba(4,10,20,.6); display:none; align-items:center; justify-content:center; z-index:50; backdrop-filter:blur(2px);}
+.overlay.open{display:flex;}
+.modal{background:var(--panel); border:1px solid var(--line); width:440px; max-width:92vw; border-radius:14px; padding:26px; position:relative;}
+.modal h3{font-family:'Fraunces',serif; font-size:19px; font-weight:600; margin-bottom:4px;}
+.modal .sub{color:var(--ink-dim); font-size:12.5px; margin-bottom:20px;}
+.field{margin-bottom:13px;}
+.field label{font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-faint); display:block; margin-bottom:6px; font-family:'IBM Plex Mono',monospace;}
+.field input{width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:7px; background:var(--panel-2); color:var(--ink); font-size:13px;}
+.field input:focus{outline:1.5px solid var(--mint);}
+.field-row{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+.modal-actions{display:flex; gap:10px; margin-top:20px;}
+.modal-actions .btn{flex:1; text-align:center;}
+.close-x{position:absolute; top:18px; right:20px; background:none; border:none; color:var(--ink-faint); font-size:16px;}
+
+.proto-note{
+  display:flex; align-items:center; gap:8px; background:rgba(242,193,78,.1); border:1px solid rgba(242,193,78,.35);
+  color:var(--amber); font-size:11.5px; padding:8px 14px; border-radius:8px; margin-bottom:18px;
+}
+
+@media (max-width:900px){
+  .stats-row, .grid-2{grid-template-columns:1fr 1fr;}
+  .sidebar{width:180px;}
+}
+</style>
+</head>
+<body>
+
+<div class="role-switch">
+  <span class="label">View as</span>
+  <button class="role-pill" data-role="farmer">Farmer</button>
+  <button class="role-pill" data-role="middleman">Middleman / Center</button>
+  <button class="role-pill" data-role="factory">Factory / Manufacturing</button>
+</div>
+
+<div class="shell">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content" id="content"></main>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <h3 id="modalTitle">Log entry</h3>
+    <div class="sub" id="modalSub">Enter readings below.</div>
+    <div id="modalFields"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-mint" onclick="submitEntry()">Submit</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------------- ICONS (inline, no external lib) ---------------- */
+const ICONS = {
+  dashboard: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="1.5" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="8.5" y="1.5" width="6" height="4" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="8.5" y="7.5" width="6" height="7" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="1.5" y="9.5" width="6" height="5" rx="1" stroke="currentColor" stroke-width="1.4"/></svg>',
+  batches: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 5L8 2l6 3-6 3-6-3z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M2 8l6 3 6-3M2 11l6 3 6-3" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>',
+  alerts: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1.5L14.5 13H1.5L8 1.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M8 6.5v3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="8" cy="11.2" r="0.7" fill="currentColor"/></svg>',
+  settings: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.4" stroke="currentColor" stroke-width="1.4"/><path d="M8 1.5v1.6M8 12.9v1.6M14.5 8h-1.6M3.1 8H1.5M12.5 3.5l-1.1 1.1M4.6 11.4l-1.1 1.1M12.5 12.5l-1.1-1.1M4.6 4.6L3.5 3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
+  logout: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M6 1.5H3a1 1 0 00-1 1v11a1 1 0 001 1h3M10.5 11.5L14 8l-3.5-3.5M14 8H6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+};
+
+/* ---------------- THRESHOLD LOGIC (same rules as consumer dashboard) ---------------- */
+function chemFlag(ph, fat, snf){
+  const isPure = ph >= 6.5 && ph <= 6.7 && fat >= 3.5 && snf >= 8.5;
+  return isPure ? 'pure' : 'alert';
+}
+function volumeFlag(volIn, volOut){
+  const variance = volIn === 0 ? 0 : Math.abs(volIn - volOut) / volIn * 100;
+  return { variance: variance.toFixed(1), flag: variance > 5 ? 'alert' : 'pure' };
+}
+
+/* ---------------- SEED DATA (sample/demo only — not live) ---------------- */
+const state = {
+  currentRole: 'farmer',
+  currentView: 'dashboard',
+  data: {
+    farmer: [
+      { date: '2026-08-05', volume: 42, ph: 6.6, fat: 4.0, snf: 8.7 },
+      { date: '2026-08-06', volume: 40, ph: 6.6, fat: 3.9, snf: 8.6 },
+      { date: '2026-08-07', volume: 38, ph: 6.1, fat: 3.2, snf: 7.9 },
+      { date: '2026-08-08', volume: 44, ph: 6.6, fat: 4.1, snf: 8.8 },
+      { date: '2026-08-09', volume: 41, ph: 6.5, fat: 3.8, snf: 8.5 },
+    ],
+    middleman: [
+      { batch: 'B-2291', source: 'Farmer Cluster A', volIn: 320, volOut: 314 },
+      { batch: 'B-2292', source: 'Farmer Cluster B', volIn: 280, volOut: 275 },
+      { batch: 'B-2293', source: 'Farmer Cluster C', volIn: 300, volOut: 252 },
+      { batch: 'B-2294', source: 'Farmer Cluster A', volIn: 310, volOut: 306 },
+    ],
+    factory: [
+      { batch: 'F-5510', center: 'Center 3, Nashik', ph: 6.6, fat: 4.0, snf: 8.6, shelfDays: 4 },
+      { batch: 'F-5511', center: 'Center 1, Pune', ph: 6.6, fat: 3.9, snf: 8.5, shelfDays: 6 },
+      { batch: 'F-5512', center: 'Center 4, Nagpur', ph: 6.0, fat: 3.1, snf: 7.6, shelfDays: 2 },
+    ],
+  },
+  filter: 'all',
+};
+
+const ROLES = {
+  farmer: {
+    label: 'Farmer',
+    userLabel: 'Ramesh Patil', userInitial: 'R',
+    title: 'Farmer Dashboard', sub: "Track your deliveries and test results.",
+    stats: (rows) => [
+      ['Total Deliveries', rows.length, ''],
+      ['Avg. Volume', (rows.reduce((a,r)=>a+r.volume,0)/(rows.length||1)).toFixed(1) + ' L', ''],
+      ['Last Result', rows.length ? (chemFlag(rows[rows.length-1].ph, rows[rows.length-1].fat, rows[rows.length-1].snf)==='pure'?'Pure':'Flagged') : '—', ''],
+      ['Active Alerts', rows.filter(r=>chemFlag(r.ph,r.fat,r.snf)==='alert').length, 'warn'],
+    ],
+    chartValues: (rows) => rows.map(r=>r.volume),
+    chartLabels: (rows) => rows.map(r=>r.date.slice(5)),
+    tableCols: ['Date','Volume (L)','pH','Fat %','SNF %','Flag'],
+    tableRow: (r) => {
+      const f = chemFlag(r.ph, r.fat, r.snf);
+      return [r.date, r.volume, r.ph, r.fat+'%', r.snf+'%', flagPill(f)];
+    },
+    rowFlag: (r) => chemFlag(r.ph, r.fat, r.snf),
+    addFields: [
+      { key:'date', label:'Date', placeholder:'2026-08-10' },
+      { key:'volume', label:'Volume (L)', placeholder:'40' },
+      { key:'ph', label:'pH (6.5–6.7 normal)', placeholder:'6.6' },
+      { key:'fat', label:'Fat %', placeholder:'4.0' },
+      { key:'snf', label:'SNF %', placeholder:'8.6' },
+    ],
+    addTitle: 'Log a delivery',
+    buildRow: (v) => ({ date: v.date||'—', volume: parseFloat(v.volume)||0, ph: parseFloat(v.ph)||6.6, fat: parseFloat(v.fat)||4.0, snf: parseFloat(v.snf)||8.5 }),
+    alertText: (r) => `pH ${r.ph} · Fat ${r.fat}% · SNF ${r.snf}% — outside safe threshold`,
+    alertId: (r) => r.date,
+  },
+  middleman: {
+    label: 'Middleman / Center',
+    userLabel: 'Suresh Kadam', userInitial: 'S',
+    title: 'Collection Center Dashboard', sub: 'Reconcile incoming vs. outgoing volume.',
+    stats: (rows) => [
+      ['Batches In', rows.length, ''],
+      ['Total Volume In', rows.reduce((a,r)=>a+r.volIn,0) + ' L', ''],
+      ['Avg. Variance', (rows.reduce((a,r)=>a+parseFloat(volumeFlag(r.volIn,r.volOut).variance),0)/(rows.length||1)).toFixed(1) + '%', ''],
+      ['Fraud Alerts', rows.filter(r=>volumeFlag(r.volIn,r.volOut).flag==='alert').length, 'warn'],
+    ],
+    chartValues: (rows) => rows.map(r=>r.volIn),
+    chartLabels: (rows) => rows.map(r=>r.batch),
+    tableCols: ['Batch ID','Source','Vol In (L)','Vol Out (L)','Variance','Flag'],
+    tableRow: (r) => {
+      const vf = volumeFlag(r.volIn, r.volOut);
+      return [r.batch, r.source, r.volIn, r.volOut, vf.variance+'%', flagPill(vf.flag)];
+    },
+    rowFlag: (r) => volumeFlag(r.volIn, r.volOut).flag,
+    addFields: [
+      { key:'batch', label:'Batch ID', placeholder:'B-2295' },
+      { key:'source', label:'Source', placeholder:'Farmer Cluster A' },
+      { key:'volIn', label:'Volume In (L)', placeholder:'300' },
+      { key:'volOut', label:'Volume Out (L)', placeholder:'295' },
+    ],
+    addTitle: 'Reconcile a batch',
+    buildRow: (v) => ({ batch: v.batch||'—', source: v.source||'—', volIn: parseFloat(v.volIn)||0, volOut: parseFloat(v.volOut)||0 }),
+    alertText: (r) => `Volume variance ${volumeFlag(r.volIn,r.volOut).variance}% — above 5% threshold`,
+    alertId: (r) => r.batch,
+  },
+  factory: {
+    label: 'Factory / Manufacturing',
+    userLabel: 'Anjali Deshmukh', userInitial: 'A',
+    title: 'Manufacturing QA Dashboard', sub: 'Validate incoming batches against lab thresholds.',
+    stats: (rows) => [
+      ['Incoming Shipments', rows.length, ''],
+      ['Lab Validated', rows.filter(r=>chemFlag(r.ph,r.fat,r.snf)==='pure').length, 'up'],
+      ['Shelf-Life Alerts', rows.filter(r=>r.shelfDays<=3).length, 'warn'],
+      ['Rejected Batches', rows.filter(r=>chemFlag(r.ph,r.fat,r.snf)==='alert').length, 'warn'],
+    ],
+    chartValues: (rows) => rows.map(r=>r.shelfDays),
+    chartLabels: (rows) => rows.map(r=>r.batch),
+    tableCols: ['Batch ID','Center','pH','Fat %','SNF %','Shelf Life','Flag'],
+    tableRow: (r) => {
+      const f = chemFlag(r.ph, r.fat, r.snf);
+      return [r.batch, r.center, r.ph, r.fat+'%', r.snf+'%', r.shelfDays+' days', flagPill(f)];
+    },
+    rowFlag: (r) => chemFlag(r.ph, r.fat, r.snf),
+    addFields: [
+      { key:'batch', label:'Batch ID', placeholder:'F-5513' },
+      { key:'center', label:'Source Center', placeholder:'Center 2, Pune' },
+      { key:'ph', label:'pH', placeholder:'6.6' },
+      { key:'fat', label:'Fat %', placeholder:'4.0' },
+      { key:'snf', label:'SNF %', placeholder:'8.6' },
+      { key:'shelfDays', label:'Shelf Life (days)', placeholder:'5' },
+    ],
+    addTitle: 'Validate a batch',
+    buildRow: (v) => ({ batch: v.batch||'—', center: v.center||'—', ph: parseFloat(v.ph)||6.6, fat: parseFloat(v.fat)||4.0, snf: parseFloat(v.snf)||8.5, shelfDays: parseFloat(v.shelfDays)||5 }),
+    alertText: (r) => `pH ${r.ph} · Fat ${r.fat}% · SNF ${r.snf}% — failed lab threshold`,
+    alertId: (r) => r.batch,
+  },
+};
+
+function flagPill(f){
+  return f === 'pure'
+    ? '<span class="flag-pill pure"><span class="dot"></span>Pure</span>'
+    : '<span class="flag-pill alert"><span class="dot"></span>Flagged</span>';
+}
+
+/* ---------------- RENDER ---------------- */
+function renderAll(){
+  document.querySelectorAll('.role-pill').forEach(b=>{
+    b.classList.toggle('active', b.dataset.role === state.currentRole);
+  });
+  renderSidebar();
+  renderContent();
+}
+
+function renderSidebar(){
+  const sb = document.getElementById('sidebar');
+  const cfg = ROLES[state.currentRole];
+  sb.innerHTML = `
+    <div class="brand"><div class="brand-mark">M</div><div class="brand-name">MilkGuard AI</div></div>
+    <button class="nav-item ${state.currentView==='dashboard'?'active':''}" data-view="dashboard">${ICONS.dashboard}Dashboard</button>
+    <button class="nav-item ${state.currentView==='batches'?'active':''}" data-view="batches">${ICONS.batches}${state.currentRole==='middleman'?'Batches':'My Batches'}</button>
+    <button class="nav-item ${state.currentView==='alerts'?'active':''}" data-view="alerts">${ICONS.alerts}Alerts</button>
+    <button class="nav-item ${state.currentView==='settings'?'active':''}" data-view="settings">${ICONS.settings}Settings</button>
+    <div class="nav-gap"></div>
+    <div class="logout-item">${ICONS.logout}Logout</div>
+  `;
+  sb.querySelectorAll('.nav-item[data-view]').forEach(b=>{
+    b.onclick = () => { state.currentView = b.dataset.view; renderAll(); };
+  });
+}
+
+function renderContent(){
+  const cfg = ROLES[state.currentRole];
+  const rows = state.data[state.currentRole];
+  const content = document.getElementById('content');
+
+  const header = `
+    <div class="content-header">
+      <div>
+        <h1>${cfg.title}</h1>
+        <div class="sub">${cfg.sub}</div>
+      </div>
+      <div class="user-chip">
+        <div class="avatar">${cfg.userInitial}</div>
+        <div><div class="name">${cfg.userLabel}</div><div class="role">${cfg.label}</div></div>
+      </div>
+    </div>
+    <div class="proto-note">⚠ Prototype view — sample data only, not connected to a live backend.</div>
+  `;
+
+  if (state.currentView === 'dashboard') content.innerHTML = header + renderDashboard(cfg, rows);
+  else if (state.currentView === 'batches') content.innerHTML = header + renderBatches(cfg, rows);
+  else if (state.currentView === 'alerts') content.innerHTML = header + renderAlerts(cfg, rows);
+  else content.innerHTML = header + renderSettings(cfg);
+
+  wireViewEvents(cfg, rows);
+}
+
+function renderDashboard(cfg, rows){
+  const stats = cfg.stats(rows);
+  const statCards = stats.map(([lbl,val,delta])=>`
+    <div class="stat-card">
+      <div class="lbl">${lbl}</div>
+      <div class="val">${val}</div>
+      ${delta ? `<div class="delta ${delta}">${delta==='warn'?'Needs review':'On track'}</div>` : ''}
+    </div>`).join('');
+
+  const chartVals = cfg.chartValues(rows);
+  const chartLabels = cfg.chartLabels(rows);
+  const chartSvg = buildAreaChart(chartVals, chartLabels);
+
+  const recent = rows.slice(-4).reverse().map(r=>{
+    const f = cfg.rowFlag(r);
+    return `<div class="side-row"><span class="id">${cfg.alertId(r)}</span><span class="meta">${flagPill(f)}</span></div>`;
+  }).join('') || '<div class="empty-note">No entries yet</div>';
+
+  return `
+    <div class="stats-row">${statCards}</div>
+    <div class="grid-2">
+      <div class="panel">
+        <h3>Volume Trend</h3>
+        <div class="sub">Recent activity</div>
+        <div class="chart-wrap">${chartSvg}</div>
+      </div>
+      <div class="panel">
+        <h3>Recent Entries</h3>
+        <div class="sub">Latest records</div>
+        <div class="side-list">${recent}</div>
+      </div>
+    </div>
+    <div class="panel">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+        <div><h3 style="margin-bottom:2px;">All Records</h3><div class="sub" style="margin-bottom:0;">Full history for this role</div></div>
+        <button class="btn btn-mint" id="addBtnDash">+ Add Entry</button>
+      </div>
+      ${buildTable(cfg, rows)}
+    </div>
+  `;
+}
+
+function renderBatches(cfg, rows){
+  return `
+    <div class="panel">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+        <h3 style="margin-bottom:0;">All Records</h3>
+        <button class="btn btn-mint" id="addBtnBatches">+ Add Entry</button>
+      </div>
+      <div class="filter-row">
+        <button class="chip ${state.filter==='all'?'active':''}" data-f="all">All</button>
+        <button class="chip ${state.filter==='pure'?'active':''}" data-f="pure">Pure</button>
+        <button class="chip ${state.filter==='alert'?'active':''}" data-f="alert">Flagged</button>
+      </div>
+      ${buildTable(cfg, rows, state.filter)}
+    </div>
+  `;
+}
+
+function renderAlerts(cfg, rows){
+  const flagged = rows.filter(r => cfg.rowFlag(r) === 'alert');
+  if (!flagged.length) return `<div class="panel"><div class="empty-note">No active alerts for your records.</div></div>`;
+  return `<div>` + flagged.map(r => `
+    <div class="alert-item">
+      <div class="icon">${ICONS.alerts}</div>
+      <div class="body">
+        <div class="title">${cfg.alertId(r)} flagged</div>
+        <div class="detail">${cfg.alertText(r)}</div>
+      </div>
+      <div class="time">Needs review</div>
+    </div>
+  `).join('') + `</div>`;
+}
+
+function renderSettings(cfg){
+  return `
+    <div class="settings-card">
+      <div class="settings-row"><span class="k">Name</span><span class="v">${cfg.userLabel}</span></div>
+      <div class="settings-row"><span class="k">Role</span><span class="v">${cfg.label}</span></div>
+      <div class="settings-row"><span class="k">Access scope</span><span class="v">Own records only</span></div>
+      <div class="settings-row"><span class="k">Notifications</span><span class="v">On</span></div>
+    </div>
+  `;
+}
+
+function buildTable(cfg, rows, filter){
+  let filtered = rows;
+  if (filter && filter !== 'all') filtered = rows.filter(r => cfg.rowFlag(r) === filter);
+  const head = cfg.tableCols.map(c=>`<th>${c}</th>`).join('');
+  const body = filtered.slice().reverse().map(r => `<tr>${cfg.tableRow(r).map(v=>`<td>${v}</td>`).join('')}</tr>`).join('')
+    || `<tr><td colspan="${cfg.tableCols.length}"><div class="empty-note">No records match this filter</div></td></tr>`;
+  return `<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+}
+
+function buildAreaChart(values, labels){
+  const w = 560, h = 190, pad = 24;
+  const max = Math.max(...values, 1) * 1.15;
+  const min = Math.min(...values, 0) * 0.9;
+  const range = (max - min) || 1;
+  const stepX = (w - pad*2) / (values.length - 1 || 1);
+  const pts = values.map((v,i) => {
+    const x = pad + i*stepX;
+    const y = h - pad - ((v - min)/range) * (h - pad*1.6);
+    return [x,y];
+  });
+  const linePath = pts.map((p,i)=> (i===0?'M':'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+  const areaPath = linePath + ` L${pts[pts.length-1][0].toFixed(1)},${h-pad} L${pts[0][0].toFixed(1)},${h-pad} Z`;
+  const labelsSvg = labels.map((l,i)=>`<text x="${pts[i][0].toFixed(1)}" y="${h-4}" font-size="8.5" fill="#5A6C8A" text-anchor="middle" font-family="IBM Plex Mono, monospace">${l}</text>`).join('');
+  const dots = pts.map(p=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3" fill="#0B1220" stroke="#2F9E6E" stroke-width="1.6"/>`).join('');
+  return `
+    <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#2F9E6E" stop-opacity="0.35"/>
+          <stop offset="100%" stop-color="#2F9E6E" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <path d="${areaPath}" fill="url(#areaFill)"/>
+      <path d="${linePath}" fill="none" stroke="#2F9E6E" stroke-width="2"/>
+      ${dots}
+      ${labelsSvg}
+    </svg>
+  `;
+}
+
+/* ---------------- MODAL ---------------- */
+function wireViewEvents(cfg, rows){
+  const addBtn = document.getElementById('addBtnDash') || document.getElementById('addBtnBatches');
+  if (addBtn) addBtn.onclick = () => openModal(cfg);
+
+  document.querySelectorAll('.chip[data-f]').forEach(c=>{
+    c.onclick = () => { state.filter = c.dataset.f; renderContent(); };
+  });
+}
+
+function openModal(cfg){
+  document.getElementById('modalTitle').textContent = cfg.addTitle;
+  document.getElementById('modalSub').textContent = 'This adds a sample entry to your in-memory records.';
+  const fieldsHtml = cfg.addFields.map(f => `
+    <div class="field"><label>${f.label}</label><input id="fld_${f.key}" placeholder="${f.placeholder}"></div>
+  `).join('');
+  document.getElementById('modalFields').innerHTML = fieldsHtml;
+  document.getElementById('overlay').classList.add('open');
+}
+function closeModal(){ document.getElementById('overlay').classList.remove('open'); }
+
+function submitEntry(){
+  const cfg = ROLES[state.currentRole];
+  const values = {};
+  cfg.addFields.forEach(f => { values[f.key] = document.getElementById('fld_'+f.key).value; });
+  const row = cfg.buildRow(values);
+  state.data[state.currentRole].push(row);
+  closeModal();
+  renderContent();
+}
+
+/* ---------------- INIT ---------------- */
+document.querySelectorAll('.role-pill').forEach(b=>{
+  b.onclick = () => { state.currentRole = b.dataset.role; state.currentView = 'dashboard'; state.filter='all'; renderAll(); };
+});
+renderAll();
+</script>
+</body>
+</html>

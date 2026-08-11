@@ -1,0 +1,45 @@
+.data-entry-page {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.forms-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+.forms-grid .panel h3 {
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.log-panel {
+  min-height: 200px;
+}
+
+.action-log {
+  list-style-type: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.action-log li {
+  padding: 0.5rem;
+  background-color: var(--bg-deep);
+  border-left: 3px solid var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.action-log li:contains("Success") {
+  border-left-color: var(--color-safe);
+}
+
+.action-log li:contains("Error") {
+  border-left-color: var(--color-critical);
+}

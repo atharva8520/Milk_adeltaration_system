@@ -1,0 +1,35 @@
+{
+    "XGBoost": {
+        "Precision": 0.5238095238095238,
+        "Recall": 0.44,
+        "F1-Score": 0.4782608695652174,
+        "ROC-AUC": 0.7384421052631579,
+        "ConfusionMatrix": [
+            [
+                465,
+                10
+            ],
+            [
+                14,
+                11
+            ]
+        ]
+    },
+    "LightGBM": {
+        "Precision": 0.42105263157894735,
+        "Recall": 0.32,
+        "F1-Score": 0.36363636363636365,
+        "ROC-AUC": 0.7058526315789473,
+        "ConfusionMatrix": [
+            [
+                464,
+                11
+            ],
+            [
+                17,
+                8
+            ]
+        ]
+    },
+    "Best_Model": "XGBoost"
+}

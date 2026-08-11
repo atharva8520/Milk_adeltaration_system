@@ -1,0 +1,45 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test-and-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Install dependencies
+        run: |
+          pip install flake8 pytest
+          pip install -r backend/requirements.txt
+          pip install -r ml-service/requirements.txt
+          
+      - name: Lint Code
+        run: |
+          flake8 backend/app ml-service/app ml/features --max-line-length=120
+          
+  build:
+    needs: test-and-lint
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        
+      - name: Build Backend Docker Image
+        run: docker build -t milkguard-backend:latest ./backend
+        
+      - name: Build ML Service Docker Image
+        run: docker build -t milkguard-ml-service:latest ./ml-service

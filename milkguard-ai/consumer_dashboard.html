@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>MilkGuard AI — Consumer Dashboard</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root {
+  /* Light Mode Variables */
+  --milk: #FAF8F3;
+  --navy: #16233D;
+  --navy-soft: #2C3B57;
+  --pure: #2F9E6E;
+  --pure-soft: #E3F3EB;
+  --alert: #E4572E;
+  --alert-soft: #FBE7E0;
+  --steel: #DCE3E8;
+  --steel-line: #C9D2D9;
+  --ink: #16233D;
+  --ink-muted: #5B6B85;
+  --chip-bg: #ffffff;
+  --input-bg: #ffffff;
+  --modal-bg: #FAF8F3;
+  --table-border: #DCE3E8;
+  --glass-stroke: #16233D;
+}
+
+[data-theme="dark"] {
+  /* Dark Mode Variables */
+  --milk: #0B1120;
+  --navy: #38BDF8;
+  --navy-soft: #0EA5E9;
+  --pure: #34D399;
+  --pure-soft: rgba(52, 211, 153, 0.15);
+  --alert: #F87171;
+  --alert-soft: rgba(248, 113, 113, 0.15);
+  --steel: #1E293B;
+  --steel-line: #334155;
+  --ink: #F8FAFC;
+  --ink-muted: #94A3B8;
+  --chip-bg: #1E293B;
+  --input-bg: #0F172A;
+  --modal-bg: #1E293B;
+  --table-border: #334155;
+  --glass-stroke: #F8FAFC;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { 
+  background: var(--milk); 
+  color: var(--ink); 
+  font-family: 'Inter', sans-serif; 
+  min-height: 100vh; 
+  padding: 0 0 60px;
+  transition: background 0.3s, color 0.3s;
+}
+.wrap { max-width: 1040px; margin: 0 auto; padding: 0 28px; }
+
+header { 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  padding: 28px 0 22px; 
+  border-bottom: 1px solid var(--steel-line); 
+  margin-bottom: 36px; 
+  transition: border-color 0.3s;
+}
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand-mark { 
+  width: 34px; height: 34px; 
+  border-radius: 50%; 
+  background: var(--navy); 
+  display: flex; align-items: center; justify-content: center; 
+  color: var(--milk); 
+  font-family: 'Fraunces', serif; 
+  font-weight: 700; font-size: 16px; 
+}
+.brand-name { font-family: 'Fraunces', serif; font-weight: 600; font-size: 20px; letter-spacing: -0.01em; }
+.brand-tag { font-size: 11px; color: var(--ink-muted); letter-spacing: .08em; text-transform: uppercase; margin-top: 2px; }
+.header-actions { display: flex; align-items: center; gap: 16px; }
+.user-chip { 
+  display: flex; align-items: center; gap: 8px; 
+  font-family: 'IBM Plex Mono', monospace; font-size: 12px; 
+  color: var(--ink-muted); 
+  background: var(--chip-bg); 
+  border: 1px solid var(--steel-line); 
+  padding: 8px 14px; border-radius: 20px; 
+  transition: background 0.3s, border-color 0.3s, color 0.3s;
+}
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--pure); }
+.theme-toggle {
+  background: none;
+  border: 1px solid var(--steel-line);
+  color: var(--ink-muted);
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-family: 'IBM Plex Mono', monospace;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.3s;
+}
+.theme-toggle:hover {
+  background: var(--steel);
+  color: var(--ink);
+}
+
+.hero { display: grid; grid-template-columns: 1.05fr 1fr; gap: 56px; align-items: center; margin-bottom: 64px; }
+.hero-copy h1 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 40px; line-height: 1.12; letter-spacing: -0.015em; margin-bottom: 16px; }
+.hero-copy p { color: var(--ink-muted); font-size: 15.5px; line-height: 1.6; max-width: 420px; margin-bottom: 28px; }
+.cta-row { display: flex; gap: 12px; align-items: center; }
+.btn-primary { 
+  background: var(--navy); color: var(--milk); 
+  border: none; padding: 14px 26px; border-radius: 8px; 
+  font-weight: 600; font-size: 14.5px; 
+  cursor: pointer; transition: transform .15s ease, background .15s ease, color 0.3s; 
+}
+.btn-primary:hover { background: var(--navy-soft); transform: translateY(-1px); }
+.btn-ghost { 
+  background: none; border: 1px solid var(--steel-line); 
+  padding: 14px 20px; border-radius: 8px; font-size: 14px; 
+  color: var(--ink-muted); cursor: pointer; font-family: 'Inter', sans-serif; 
+  transition: border-color 0.3s, color 0.3s;
+}
+.btn-ghost:hover {
+  border-color: var(--navy);
+  color: var(--navy);
+}
+
+/* signature glass */
+.glass-stage { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; height: 360px; position: relative; }
+.glass-outline { width: 150px; height: 200px; position: relative; }
+svg.glass-svg { width: 100%; height: 100%; display: block; position: relative; z-index: 2; }
+#liquid { transition: y 1.7s cubic-bezier(.4,0,.2,1), height 1.7s cubic-bezier(.4,0,.2,1); }
+.glass-svg path, .glass-svg line {
+  stroke: var(--glass-stroke);
+  transition: stroke 0.3s;
+}
+
+/* leak: milk escaping through the glass wall */
+.leak {
+  position: absolute; z-index: 1;
+  left: 104px; top: 112px; width: 7px; height: 0;
+  background: linear-gradient(180deg, #C9C08A, #B7AE79);
+  border-radius: 1px 1px 5px 5px;
+  transition: height 1.3s cubic-bezier(.4,0,.2,1) .1s;
+  box-shadow: 1px 0 2px rgba(22,35,61,.15);
+}
+.crack {
+  position: absolute; z-index: 3; left: 100px; top: 108px;
+  width: 14px; height: 14px; opacity: 0; transition: opacity .3s ease;
+}
+.crack path { stroke: var(--glass-stroke); transition: stroke 0.3s; }
+.crack.show { opacity: 1; }
+
+.verdict-label { margin-top: 16px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: .06em; color: var(--ink-muted); text-transform: uppercase; opacity: 0; transition: opacity .5s ease .3s; text-align: center; }
+.verdict-label.show { opacity: 1; }
+.verdict-label.pure { color: var(--pure); }
+.verdict-label.alert { color: var(--alert); }
+
+.drop { position: absolute; top: 198px; left: 50%; width: 9px; height: 12px; border-radius: 0 50% 50% 50%; transform: translateX(-50%) rotate(45deg) scale(0); opacity: 0; }
+.drop.fall { animation: dropfall 1s ease-in forwards; }
+@keyframes dropfall {
+  0% { transform: translateX(-50%) rotate(45deg) scale(0); opacity: 0; top: 198px; }
+  15% { transform: translateX(-50%) rotate(45deg) scale(1); opacity: 1; }
+  85% { top: 305px; opacity: 1; }
+  100% { top: 305px; opacity: 0; }
+}
+.drop2 { position: absolute; top: 112px; left: 112px; width: 7px; height: 9px; border-radius: 0 50% 50% 50%; transform: rotate(20deg) scale(0); opacity: 0; background: #B7AE79; z-index: 1; }
+.drop2.fall { animation: dropfall2 1s ease-in forwards; }
+@keyframes dropfall2 {
+  0% { transform: rotate(20deg) scale(0); opacity: 0; top: 112px; left: 112px; }
+  15% { transform: rotate(20deg) scale(1); opacity: 1; }
+  85% { top: 305px; left: 126px; opacity: 1; }
+  100% { top: 305px; left: 126px; opacity: 0; }
+}
+
+.pool { width: 56px; height: 10px; border-radius: 50%; background: var(--steel); margin-top: 12px; transition: background .4s ease; }
+.pool.ripple { animation: ripple .6s ease; }
+@keyframes ripple { 0% { transform: scale(1); } 40% { transform: scale(1.7); } 100% { transform: scale(1); } }
+.pool.pure { background: var(--pure); }
+.pool.alert { background: var(--alert); }
+
+.section-label { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-muted); margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--steel-line); transition: background 0.3s;}
+
+table { width: 100%; border-collapse: collapse; margin-bottom: 56px; }
+thead th { text-align: left; font-weight: 600; font-size: 12px; color: var(--ink-muted); padding: 10px 14px; border-bottom: 1px solid var(--steel-line); text-transform: uppercase; letter-spacing: .04em; transition: border-color 0.3s, color 0.3s;}
+tbody td { padding: 14px; font-size: 14px; border-bottom: 1px solid var(--table-border); font-family: 'IBM Plex Mono', monospace; transition: border-color 0.3s; }
+tbody td.company { font-family: 'Inter', sans-serif; font-weight: 500; }
+.flag-pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 20px; font-family: 'Inter', sans-serif; font-weight: 600; font-size: 12.5px; }
+.flag-pill.pure { background: var(--pure-soft); color: var(--pure); }
+.flag-pill.alert { background: var(--alert-soft); color: var(--alert); }
+.pill-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.track-link { color: var(--navy); text-decoration: none; font-size: 13px; font-weight: 500; border-bottom: 1px solid var(--steel-line); transition: border-color 0.3s, color 0.3s;}
+.track-link:hover { border-color: var(--navy); }
+
+.overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); display: none; align-items: center; justify-content: center; z-index: 50; backdrop-filter: blur(4px); }
+.overlay.open { display: flex; }
+.modal { background: var(--modal-bg); width: 460px; max-width: 92vw; border-radius: 14px; padding: 32px; box-shadow: 0 24px 60px rgba(0,0,0,0.4); position: relative; transition: background 0.3s; color: var(--ink); }
+.modal h3 { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 600; margin-bottom: 6px; }
+.modal .sub { color: var(--ink-muted); font-size: 13px; margin-bottom: 24px; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+label { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-muted); display: block; margin-bottom: 6px; font-family: 'IBM Plex Mono', monospace; }
+input, .auto-field { width: 100%; padding: 11px 12px; border: 1px solid var(--steel-line); border-radius: 7px; font-family: 'IBM Plex Mono', monospace; font-size: 13.5px; background: var(--input-bg); color: var(--ink); transition: background 0.3s, border-color 0.3s, color 0.3s; }
+input:focus { outline: 2px solid var(--navy); outline-offset: 1px; }
+.auto-field { background: var(--steel); color: var(--ink-muted); display: flex; align-items: center; }
+.divider { height: 1px; background: var(--steel-line); margin: 18px 0; transition: background 0.3s;}
+.chem-label { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px; }
+.modal-actions { display: flex; gap: 10px; margin-top: 24px; }
+.modal-actions .btn-ghost { flex: 1; text-align: center; }
+.modal-actions .btn-primary { flex: 1.4; text-align: center; }
+.close-x { position: absolute; top: 20px; right: 24px; background: none; border: none; font-size: 18px; color: var(--ink-muted); cursor: pointer; transition: color 0.3s;}
+.close-x:hover { color: var(--ink); }
+
+@media (prefers-reduced-motion: reduce){
+  #liquid, .drop, .drop2, .leak, .pool { transition: none !important; animation: none !important; }
+}
+@media (max-width: 760px){
+  .hero { grid-template-columns: 1fr; gap: 32px; }
+  .glass-stage { order: -1; height: 280px; }
+}
+</style>
+</head>
+<body data-theme="dark">
+
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="brand-mark">M</div>
+      <div>
+        <div class="brand-name">MilkGuard AI</div>
+        <div class="brand-tag">Consumer Verification</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="theme-toggle" onclick="toggleTheme()" id="themeToggleBtn">
+        <span>☀️ Light</span>
+      </button>
+      <div class="user-chip"><span class="dot"></span> consumer@e2e.com</div>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-copy">
+      <h1>Test it before<br>you trust it.</h1>
+      <p>Log a sample's chemical readings. Pure milk stays in the glass. Adulterated milk doesn't — it leaks straight back out.</p>
+      <div class="cta-row">
+        <button class="btn-primary" onclick="openModal()">+ Add Data</button>
+        <button class="btn-ghost">Scan QR Code</button>
+      </div>
+    </div>
+
+    <div class="glass-stage">
+      <div class="glass-outline">
+        <svg class="glass-svg" viewBox="0 0 150 200">
+          <defs>
+            <clipPath id="glassClip">
+              <path d="M28,14 L122,14 L110,190 Q75,200 40,190 Z"/>
+            </clipPath>
+          </defs>
+          <g clip-path="url(#glassClip)">
+            <rect id="liquid" x="0" y="200" width="150" height="0" fill="#F5F0DC"/>
+          </g>
+          <path d="M28,14 L122,14 L110,190 Q75,200 40,190 Z" fill="none" stroke-width="2.5" stroke-linejoin="round"/>
+          <line x1="24" y1="14" x2="126" y2="14" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+        <div class="leak" id="leak"></div>
+        <svg class="crack" id="crack" viewBox="0 0 14 14">
+          <path d="M2,1 L7,7 L4,8 L10,13" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div class="drop" id="drop"></div>
+        <div class="drop2" id="drop2"></div>
+      </div>
+      <div class="verdict-label" id="verdictLabel">awaiting sample</div>
+      <div class="pool" id="pool"></div>
+    </div>
+  </section>
+
+  <div class="section-label">Recent Entries</div>
+  <table>
+    <thead>
+      <tr><th>Consumer ID</th><th>Company</th><th>Chemical Status</th><th>Flag</th><th>Supply Trace</th></tr>
+    </thead>
+    <tbody id="entriesBody">
+      <tr>
+        <td>C-1092</td>
+        <td class="company">DairyFit Corp</td>
+        <td>pH 6.1 · Urea detected</td>
+        <td><span class="flag-pill alert"><span class="pill-dot"></span>Red Flag</span></td>
+        <td><a class="track-link" href="#">View Pipeline →</a></td>
+      </tr>
+      <tr>
+        <td>C-1093</td>
+        <td class="company">PureMilk Ltd</td>
+        <td>pH 6.6 · Fat 4.0%</td>
+        <td><span class="flag-pill pure"><span class="pill-dot"></span>Green Flag</span></td>
+        <td><a class="track-link" href="#">View Pipeline →</a></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <button class="close-x" onclick="closeModal()">✕</button>
+    <h3>Log a sample</h3>
+    <div class="sub">Enter readings and we'll flag it automatically.</div>
+
+    <div class="field-row">
+      <div><label>Consumer ID</label><input id="cid" placeholder="C-1094"></div>
+      <div><label>Volume (L)</label><input id="vol" placeholder="1.0"></div>
+    </div>
+    <div><label>Company Name</label><div class="auto-field">Auto-detected from scanner ID</div></div>
+
+    <div class="divider"></div>
+    <div class="chem-label">Chemical Analysis</div>
+    <div class="field-row">
+      <div><label>pH (6.5–6.7 normal)</label><input id="ph" placeholder="6.6"></div>
+      <div><label>Fat %</label><input id="fat" placeholder="4.0"></div>
+    </div>
+    <div class="field-row" style="grid-template-columns:1fr;">
+      <div><label>SNF %</label><input id="snf" placeholder="8.5"></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" onclick="submitSample()">Submit & Test</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleTheme() {
+  const body = document.body;
+  const btn = document.getElementById('themeToggleBtn');
+  if (body.getAttribute('data-theme') === 'dark') {
+    body.setAttribute('data-theme', 'light');
+    btn.innerHTML = '🌙 Dark';
+  } else {
+    body.setAttribute('data-theme', 'dark');
+    btn.innerHTML = '☀️ Light';
+  }
+}
+
+function openModal(){ document.getElementById('overlay').classList.add('open'); }
+function closeModal(){ document.getElementById('overlay').classList.remove('open'); }
+
+function submitSample(){
+  const ph = parseFloat(document.getElementById('ph').value) || 6.6;
+  const fat = parseFloat(document.getElementById('fat').value) || 4.0;
+  const snf = parseFloat(document.getElementById('snf').value) || 8.5;
+  const cid = document.getElementById('cid').value || 'C-1094';
+  const isPure = (ph >= 6.5 && ph <= 6.7) && fat >= 3.5 && snf >= 8.5;
+  closeModal();
+  runVerdict(isPure, cid, ph, fat, snf);
+}
+
+function runVerdict(isPure, cid, ph, fat, snf){
+  const liquid = document.getElementById('liquid');
+  const pool = document.getElementById('pool');
+  const drop = document.getElementById('drop');
+  const drop2 = document.getElementById('drop2');
+  const leak = document.getElementById('leak');
+  const crack = document.getElementById('crack');
+  const label = document.getElementById('verdictLabel');
+
+  // reset
+  pool.classList.remove('pure','alert','ripple'); void pool.offsetWidth;
+  leak.style.height = '0px';
+  crack.classList.remove('show');
+  drop.classList.remove('fall'); void drop.offsetWidth;
+  drop2.classList.remove('fall'); void drop2.offsetWidth;
+
+  // fill: always pours in first
+  liquid.setAttribute('fill', isPure ? '#F5F0DC' : '#D8CE96');
+  liquid.setAttribute('y', '46');
+  liquid.setAttribute('height', '154');
+
+  if (isPure){
+    // stays full — one settling drop, pool turns green
+    setTimeout(()=>{
+      drop.style.background = '#2F9E6E';
+      drop.classList.add('fall');
+    }, 1750);
+    setTimeout(()=>{ pool.classList.add('pure','ripple'); }, 2700);
+    label.textContent = 'Good to consume';
+    label.className = 'verdict-label show pure';
+  } else {
+    // the glass rejects it: crack opens, milk leaks back out, level drops
+    setTimeout(()=>{
+      crack.classList.add('show');
+      leak.style.height = '78px';
+      liquid.setAttribute('y', '92');
+      liquid.setAttribute('height', '108');
+      drop2.style.background = '#E4572E';
+      drop2.classList.add('fall');
+    }, 1750);
+    setTimeout(()=>{ pool.classList.add('alert','ripple'); }, 2850);
+    label.textContent = 'Adulterated — rejected';
+    label.className = 'verdict-label show alert';
+  }
+
+  const tbody = document.getElementById('entriesBody');
+  const row = document.createElement('tr');
+  row.innerHTML = `
+    <td>${cid}</td>
+    <td class="company">Auto-detected</td>
+    <td>pH ${ph} · Fat ${fat}% · SNF ${snf}%</td>
+    <td>${isPure
+      ? '<span class="flag-pill pure"><span class="pill-dot"></span>Green Flag</span>'
+      : '<span class="flag-pill alert"><span class="pill-dot"></span>Red Flag</span>'}</td>
+    <td><a class="track-link" href="#">View Pipeline →</a></td>`;
+  tbody.prepend(row);
+}
+</script>
+
+</body>
+</html>
