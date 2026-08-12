@@ -8,11 +8,15 @@ from . import schemas
 
 REFERENCE_RANGES = {
     "ph": {"min": 6.5, "max": 6.8, "unit": "", "ref": "BIS IS 1479 (Part 1)"},
-    "density": {"min": 1.028, "max": 1.033, "unit": "g/cm3", "ref": "BIS IS 1479 (Part 1)"},
-    "fat_pct": {"min": 3.2, "max": 100.0, "unit": "%", "ref": "FSSAI Minimum Standard"},
-    "snf_pct": {"min": 8.3, "max": 100.0, "unit": "%", "ref": "FSSAI Minimum Standard"},
+    "density": {"min": 1.028, "max": 1.032, "unit": "g/cm3", "ref": "BIS IS 1479 (Part 1)"},
+    "fat_pct": {"min": 3.5, "max": 6.5, "unit": "%", "ref": "FSSAI Minimum Standard"},
+    "snf_pct": {"min": 8.5, "max": 100.0, "unit": "%", "ref": "FSSAI Minimum Standard"},
     "formaldehyde_ppm": {"min": 0.0, "max": 0.0, "unit": "ppm", "ref": "FSSAI (Strict Prohibition)"},
     "formalin_test": {"min": 0.0, "max": 0.0, "unit": "", "ref": "FSSAI (Strict Prohibition)"},
+    "urea_mg": {"min": 0.0, "max": 70.0, "unit": "mg/100ml", "ref": "FSSAI Maximum Allowed"},
+    "water_addition_pct": {"min": 0.0, "max": 0.0, "unit": "%", "ref": "FSSAI (Strict Prohibition)"},
+    "starch_test": {"min": 0.0, "max": 0.0, "unit": "", "ref": "FSSAI (Strict Prohibition)"},
+    "detergent_test": {"min": 0.0, "max": 0.0, "unit": "", "ref": "FSSAI (Strict Prohibition)"},
     "peroxidase_activity": {"expected_binary": 1, "ref": "Qualitative Storch's Test (FSSAI)"},
     "ffa_linoleic_c18_2_pct": {"min": 0.0, "max": 4.0, "unit": "%", "ref": "Literature typical bounds"},
     "enose_sensor_s01": {"min": 0.0, "max": 2.0, "unit": "", "ref": "Baseline sensor response"},

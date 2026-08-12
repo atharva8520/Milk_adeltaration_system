@@ -68,6 +68,8 @@ class LivestockResponse(LivestockBase):
 
 class QualityReportBase(BaseModel):
     batch_id: str
+    temperature_c: Optional[float] = None
+    density_g_cm3: Optional[float] = None
     fat_percentage: float
     snf_percentage: float
     ph_level: float
@@ -77,6 +79,10 @@ class QualityReportBase(BaseModel):
     enose_sensor_s01: float
     formaldehyde_ppm: float
     ffa_linoleic_c18_2_pct: float
+    urea_mg: Optional[float] = None
+    water_addition_pct: Optional[float] = None
+    starch_test: Optional[int] = None
+    detergent_test: Optional[int] = None
 
 class QualityReportCreate(QualityReportBase):
     pass

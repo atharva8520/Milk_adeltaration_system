@@ -77,8 +77,8 @@ def get_forward_trace(db: Session, batch_id: str) -> Optional[schemas.Traceabili
     # In SQLite, we can just fetch all and filter in python for this MVP graph traversal, or use string like.
     # Postgres supports `jsonb_contains` but let's do a simple text match for the list string repr for cross-compatibility.
     
-    # Fetch batches created after this one
-    potential_children = db.query(models.Batch).filter(models.Batch.timestamp >= batch.timestamp).all()
+    # Fetch batches (without timestamp filter to avoid SQLite precision bugs during rapid tests)
+    potential_children = db.query(models.Batch).all()
     
     for p in potential_children:
         if p.parent_batch_ids and batch.id in p.parent_batch_ids:

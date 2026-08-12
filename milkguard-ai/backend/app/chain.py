@@ -44,6 +44,9 @@ def get_pipeline(db: Session, batch_id: str):
     stages = []
     overall_red_alert = False
     fssai_reference = "https://fssai.gov.in/"
+    violations = []
+    
+    previous_stage_quality = None
     
     for n in full_path:
         source_user = db.query(models.User).filter(models.User.id == n.source_id).first()
@@ -68,6 +71,7 @@ def get_pipeline(db: Session, batch_id: str):
         if any(f.severity in ["high", "critical"] for f in entity_flags):
             stage_obj["is_flagged"] = True
             overall_red_alert = True
+            violations.append(f"[{stage_obj['role'].capitalize()}] Entity has unresolved high/critical flags.")
             
         # Pull QualityReport
         qr = db.query(models.QualityReport).filter(models.QualityReport.batch_id == n.batch_id).order_by(models.QualityReport.timestamp.desc()).first()
@@ -77,12 +81,18 @@ def get_pipeline(db: Session, batch_id: str):
                 "fat_pct": qr.fat_percentage,
                 "snf_pct": qr.snf_percentage,
                 "ph": qr.ph_level,
+                "density": qr.density_g_cm3,
+                "temperature": qr.temperature_c,
                 "peroxidase_activity": qr.peroxidase_activity,
                 "enose_sensor_s02": qr.enose_sensor_s02,
                 "formalin_test": qr.formalin_test,
                 "enose_sensor_s01": qr.enose_sensor_s01,
                 "formaldehyde_ppm": qr.formaldehyde_ppm,
-                "ffa_linoleic_c18_2_pct": qr.ffa_linoleic_c18_2_pct
+                "ffa_linoleic_c18_2_pct": qr.ffa_linoleic_c18_2_pct,
+                "urea_mg": qr.urea_mg,
+                "water_addition_pct": qr.water_addition_pct,
+                "starch_test": qr.starch_test,
+                "detergent_test": qr.detergent_test
             }
             
             for param, val in params_to_check.items():
@@ -96,6 +106,41 @@ def get_pipeline(db: Session, batch_id: str):
                     if status == "Suspicious":
                         overall_red_alert = True
                         stage_obj["is_flagged"] = True
+                        violations.append(f"[{stage_obj['role'].capitalize()}] {param} out of bounds: {val} (Expected: {ref_str})")
+
+            # check deltas against previous stage
+            if previous_stage_quality:
+                # check fat
+                prev_fat = previous_stage_quality.get("fat_pct")
+                curr_fat = stage_obj["quality"].get("fat_pct")
+                if prev_fat and curr_fat:
+                    delta_fat = curr_fat["value"] - prev_fat["value"]
+                    if delta_fat < -0.2:
+                        overall_red_alert = True
+                        stage_obj["is_flagged"] = True
+                        violations.append(f"[{stage_obj['role'].capitalize()}] Suspicious Fat drop: {delta_fat:.2f}% (Possible skimming/water addition)")
+                        
+                # check snf
+                prev_snf = previous_stage_quality.get("snf_pct")
+                curr_snf = stage_obj["quality"].get("snf_pct")
+                if prev_snf and curr_snf:
+                    delta_snf = curr_snf["value"] - prev_snf["value"]
+                    if delta_snf < -0.2:
+                        overall_red_alert = True
+                        stage_obj["is_flagged"] = True
+                        violations.append(f"[{stage_obj['role'].capitalize()}] Suspicious SNF drop: {delta_snf:.2f}% (Possible adulteration)")
+                        
+                # check density
+                prev_density = previous_stage_quality.get("density")
+                curr_density = stage_obj["quality"].get("density")
+                if prev_density and curr_density:
+                    delta_density = curr_density["value"] - prev_density["value"]
+                    if abs(delta_density) > 0.002:
+                        overall_red_alert = True
+                        stage_obj["is_flagged"] = True
+                        violations.append(f"[{stage_obj['role'].capitalize()}] Suspicious Density shift: {delta_density:.4f} g/cm3")
+
+            previous_stage_quality = stage_obj["quality"]
 
         stages.append(stage_obj)
         
@@ -119,5 +164,6 @@ def get_pipeline(db: Session, batch_id: str):
         "stages": stages,
         "overall_status": "flagged" if overall_red_alert else "safe",
         "red_alert": overall_red_alert,
-        "fssai_reference": fssai_reference
+        "fssai_reference": fssai_reference,
+        "violations": violations
     }

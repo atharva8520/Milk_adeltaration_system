@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from collections import defaultdict
 from . import models, schemas, traceability
-from .engine_a import MAX_MIDDLEMAN_LOSS_PCT
+from .engine_a import MAX_LOSS_TOLERANCE_PCT
 
 def calculate_composition_breakdown(db: Session, batch_id: str):
     trace = traceability.get_backward_trace(db, batch_id)
@@ -40,7 +40,7 @@ def calculate_composition_breakdown(db: Session, batch_id: str):
             # If the gap exceeds the Engine A tolerance, it's flagged as Unknown Source
             # We scale the gap proportional to the allocated_volume of this node in the final batch
             allocated_gap = allocated_volume * (gap / node.volume_liters)
-            if gap_pct <= MAX_MIDDLEMAN_LOSS_PCT:
+            if gap_pct <= MAX_LOSS_TOLERANCE_PCT:
                 allocations["Processing Loss"] += allocated_gap
             else:
                 allocations["Unknown Source"] += allocated_gap

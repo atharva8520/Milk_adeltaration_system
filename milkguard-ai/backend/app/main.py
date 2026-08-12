@@ -73,7 +73,7 @@ import uuid
 def read_users_me(current_user: models.User = Depends(auth.get_current_user)):
     return current_user
 
-@app.get("/users", response_model=List[schemas.UserPublic])
+@app.get("/users", response_model=List[schemas.UserResponse])
 def read_users(role: Optional[str] = None, db: Session = Depends(database.get_db)):
     query = db.query(models.User)
     if role:
@@ -128,6 +128,33 @@ def create_quality_report(report: schemas.QualityReportCreate, current_user: mod
         ffa=report.ffa_linoleic_c18_2_pct
     )
     
+    # Engine C checks
+    overall_safe = not is_adulterated
+    params_to_check = {
+        "fat_pct": report.fat_percentage,
+        "snf_pct": report.snf_percentage,
+        "ph": report.ph_level,
+        "density": report.density_g_cm3,
+        "temperature": report.temperature_c,
+        "peroxidase_activity": report.peroxidase_activity,
+        "enose_sensor_s02": report.enose_sensor_s02,
+        "formalin_test": report.formalin_test,
+        "enose_sensor_s01": report.enose_sensor_s01,
+        "formaldehyde_ppm": report.formaldehyde_ppm,
+        "ffa_linoleic_c18_2_pct": report.ffa_linoleic_c18_2_pct,
+        "urea_mg": report.urea_mg,
+        "water_addition_pct": report.water_addition_pct,
+        "starch_test": report.starch_test,
+        "detergent_test": report.detergent_test
+    }
+    
+    for param, val in params_to_check.items():
+        if val is not None:
+            dev, status, ref_str = engine_c.calculate_deviation(param, val)
+            if status == "Suspicious":
+                overall_safe = False
+                break
+    
     new_report = models.QualityReport(
         batch_id=report.batch_id,
         fat_percentage=report.fat_percentage,
@@ -139,7 +166,13 @@ def create_quality_report(report: schemas.QualityReportCreate, current_user: mod
         enose_sensor_s01=report.enose_sensor_s01,
         formaldehyde_ppm=report.formaldehyde_ppm,
         ffa_linoleic_c18_2_pct=report.ffa_linoleic_c18_2_pct,
-        is_safe=not is_adulterated,
+        temperature_c=report.temperature_c,
+        density_g_cm3=report.density_g_cm3,
+        urea_mg=report.urea_mg,
+        water_addition_pct=report.water_addition_pct,
+        starch_test=report.starch_test,
+        detergent_test=report.detergent_test,
+        is_safe=overall_safe,
         ml_confidence_score=confidence
     )
     db.add(new_report)

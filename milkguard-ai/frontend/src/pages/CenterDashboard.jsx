@@ -16,7 +16,7 @@ export default function CenterDashboard({ user }) {
 
   // Form State
   const [destinationId, setDestinationId] = useState('');
-  const [parentBatchIds, setParentBatchIds] = useState([]);
+  const [parentBatchId, setParentBatchId] = useState('');
   const [volume, setVolume] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   
@@ -25,19 +25,25 @@ export default function CenterDashboard({ user }) {
     fat_percentage: '',
     snf_percentage: '',
     ph_level: '',
-    peroxidase_activity: '',
-    enose_sensor_s02: '',
+    density_g_cm3: '',
+    temperature_c: '',
+    peroxidase_activity: '1',
+    enose_sensor_s02: '0',
     formalin_test: '0',
-    enose_sensor_s01: '',
-    formaldehyde_ppm: '',
-    ffa_linoleic_c18_2_pct: ''
+    enose_sensor_s01: '0',
+    formaldehyde_ppm: '0',
+    ffa_linoleic_c18_2_pct: '0',
+    urea_mg: '0',
+    water_addition_pct: '0',
+    starch_test: '0',
+    detergent_test: '0'
   });
   
   const [submitResult, setSubmitResult] = useState(null);
 
   const fetchData = async () => {
     try {
-      const batches = await getRecentBatches(20);
+      const batches = await getRecentBatches(30);
       // Filter incoming (destination = me) vs outgoing (source = me)
       const inc = batches.filter(b => b.destination_id === user.id);
       const out = batches.filter(b => b.source_id === user.id);
@@ -59,7 +65,7 @@ export default function CenterDashboard({ user }) {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 15000);
+    const interval = setInterval(fetchData, 10000);
     return () => clearInterval(interval);
   }, []);
 
@@ -69,6 +75,11 @@ export default function CenterDashboard({ user }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!parentBatchId) {
+       setSubmitResult({ success: false, message: 'Please select an incoming batch.' });
+       return;
+    }
+
     setSubmitResult(null);
     try {
       // 1. Submit Event
@@ -77,7 +88,7 @@ export default function CenterDashboard({ user }) {
         destination_id: parseInt(destinationId),
         volume_out_liters: parseFloat(volume),
         collection_date: date,
-        parent_batch_ids: parentBatchIds
+        parent_batch_ids: [parentBatchId] // Single batch flow
       });
       
       const batchId = res.batch_id;
@@ -88,22 +99,28 @@ export default function CenterDashboard({ user }) {
         fat_percentage: parseFloat(quality.fat_percentage),
         snf_percentage: parseFloat(quality.snf_percentage),
         ph_level: parseFloat(quality.ph_level),
+        density_g_cm3: parseFloat(quality.density_g_cm3),
+        temperature_c: parseFloat(quality.temperature_c),
         peroxidase_activity: parseFloat(quality.peroxidase_activity),
         enose_sensor_s02: parseFloat(quality.enose_sensor_s02),
         formalin_test: parseInt(quality.formalin_test),
         enose_sensor_s01: parseFloat(quality.enose_sensor_s01),
         formaldehyde_ppm: parseFloat(quality.formaldehyde_ppm),
-        ffa_linoleic_c18_2_pct: parseFloat(quality.ffa_linoleic_c18_2_pct)
+        ffa_linoleic_c18_2_pct: parseFloat(quality.ffa_linoleic_c18_2_pct),
+        urea_mg: parseFloat(quality.urea_mg),
+        water_addition_pct: parseFloat(quality.water_addition_pct),
+        starch_test: parseInt(quality.starch_test),
+        detergent_test: parseInt(quality.detergent_test)
       });
       
       setSubmitResult({ success: true, batchId: batchId });
       setVolume('');
-      setParentBatchIds([]);
-      // Reset quality
-      setQuality({
-        fat_percentage: '', snf_percentage: '', ph_level: '', peroxidase_activity: '', 
-        enose_sensor_s02: '', formalin_test: '0', enose_sensor_s01: '', formaldehyde_ppm: '', ffa_linoleic_c18_2_pct: ''
-      });
+      setParentBatchId('');
+      // Keep defaults mostly
+      setQuality(prev => ({
+        ...prev,
+        fat_percentage: '', snf_percentage: '', ph_level: '', density_g_cm3: '', temperature_c: ''
+      }));
       fetchData();
     } catch (err) {
       setSubmitResult({ success: false, message: err.message });
@@ -121,7 +138,7 @@ export default function CenterDashboard({ user }) {
       <div className="content-header">
         <div>
           <h1>Collection Center Dashboard</h1>
-          <div className="sub">Reconcile incoming vs. outgoing volume and report quality.</div>
+          <div className="sub">Process incoming batches (1:1 flow) and report quality.</div>
         </div>
         <div className="user-chip">
           <div className="avatar">{user.name ? user.name.charAt(0) : 'C'}</div>
@@ -151,12 +168,13 @@ export default function CenterDashboard({ user }) {
 
       <div className="grid-2">
         <div className="panel">
-          <h3>Forward Batch & Quality Report</h3>
-          <div className="sub">Combine incoming batches and forward with quality metrics</div>
+          <h3>Process & Forward Batch</h3>
+          <div className="sub">Forward a batch with comprehensive quality metrics</div>
           <form onSubmit={handleSubmit} style={{marginTop: '15px'}}>
             <div style={{marginBottom: '10px'}}>
-              <label style={{display:'block', marginBottom:'5px', color:'#94a3b8', fontSize:'12px'}}>Select Incoming Batches to Forward</label>
-              <select multiple value={parentBatchIds} onChange={e => setParentBatchIds(Array.from(e.target.selectedOptions, option => option.value))} required style={{width: '100%', padding: '8px', background: '#0F172A', color: '#fff', border: '1px solid #1E293B', borderRadius: '4px', height: '80px'}}>
+              <label style={{display:'block', marginBottom:'5px', color:'#94a3b8', fontSize:'12px'}}>Select Incoming Batch to Forward</label>
+              <select value={parentBatchId} onChange={e => setParentBatchId(e.target.value)} required style={{width: '100%', padding: '8px', background: '#0F172A', color: '#fff', border: '1px solid #1E293B', borderRadius: '4px'}}>
+                <option value="">-- Select Batch --</option>
                 {incoming.filter(b => b.status !== 'aggregated').map(b => (
                   <option key={b.id} value={b.id}>{b.id.substring(0,8)} ({b.volume_liters}L)</option>
                 ))}
@@ -193,8 +211,16 @@ export default function CenterDashboard({ user }) {
                 <input type="number" step="0.1" name="ph_level" value={quality.ph_level} onChange={handleQualityChange} required style={{width: '100%', padding: '6px', background: '#0F172A', color: '#fff', border: '1px solid #1E293B', borderRadius: '4px', fontSize:'12px'}} />
               </div>
               <div>
-                <label style={{display:'block', marginBottom:'2px', color:'#94a3b8', fontSize:'11px'}}>Peroxidase</label>
-                <input type="number" step="0.1" name="peroxidase_activity" value={quality.peroxidase_activity} onChange={handleQualityChange} required style={{width: '100%', padding: '6px', background: '#0F172A', color: '#fff', border: '1px solid #1E293B', borderRadius: '4px', fontSize:'12px'}} />
+                <label style={{display:'block', marginBottom:'2px', color:'#94a3b8', fontSize:'11px'}}>Density (g/cm3)</label>
+                <input type="number" step="0.001" name="density_g_cm3" value={quality.density_g_cm3} onChange={handleQualityChange} required style={{width: '100%', padding: '6px', background: '#0F172A', color: '#fff', border: '1px solid #1E293B', borderRadius: '4px', fontSize:'12px'}} />
+              </div>
+              <div>
+                <label style={{display:'block', marginBottom:'2px', color:'#94a3b8', fontSize:'11px'}}>Urea (mg/100ml)</label>
+                <input type="number" step="0.1" name="urea_mg" value={quality.urea_mg} onChange={handleQualityChange} required style={{width: '100%', padding: '6px', background: '#0F172A', color: '#fff', border: '1px solid #1E293B', borderRadius: '4px', fontSize:'12px'}} />
+              </div>
+              <div>
+                <label style={{display:'block', marginBottom:'2px', color:'#94a3b8', fontSize:'11px'}}>Water Addition %</label>
+                <input type="number" step="0.1" name="water_addition_pct" value={quality.water_addition_pct} onChange={handleQualityChange} required style={{width: '100%', padding: '6px', background: '#0F172A', color: '#fff', border: '1px solid #1E293B', borderRadius: '4px', fontSize:'12px'}} />
               </div>
               <div>
                 <label style={{display:'block', marginBottom:'2px', color:'#94a3b8', fontSize:'11px'}}>Formalin Test (0/1)</label>
@@ -205,16 +231,12 @@ export default function CenterDashboard({ user }) {
                 <input type="number" step="0.01" name="formaldehyde_ppm" value={quality.formaldehyde_ppm} onChange={handleQualityChange} required style={{width: '100%', padding: '6px', background: '#0F172A', color: '#fff', border: '1px solid #1E293B', borderRadius: '4px', fontSize:'12px'}} />
               </div>
               <div>
-                <label style={{display:'block', marginBottom:'2px', color:'#94a3b8', fontSize:'11px'}}>eNose S01</label>
-                <input type="number" step="0.01" name="enose_sensor_s01" value={quality.enose_sensor_s01} onChange={handleQualityChange} required style={{width: '100%', padding: '6px', background: '#0F172A', color: '#fff', border: '1px solid #1E293B', borderRadius: '4px', fontSize:'12px'}} />
+                <label style={{display:'block', marginBottom:'2px', color:'#94a3b8', fontSize:'11px'}}>Starch Test (0/1)</label>
+                <input type="number" min="0" max="1" name="starch_test" value={quality.starch_test} onChange={handleQualityChange} required style={{width: '100%', padding: '6px', background: '#0F172A', color: '#fff', border: '1px solid #1E293B', borderRadius: '4px', fontSize:'12px'}} />
               </div>
               <div>
-                <label style={{display:'block', marginBottom:'2px', color:'#94a3b8', fontSize:'11px'}}>eNose S02</label>
-                <input type="number" step="0.01" name="enose_sensor_s02" value={quality.enose_sensor_s02} onChange={handleQualityChange} required style={{width: '100%', padding: '6px', background: '#0F172A', color: '#fff', border: '1px solid #1E293B', borderRadius: '4px', fontSize:'12px'}} />
-              </div>
-              <div>
-                <label style={{display:'block', marginBottom:'2px', color:'#94a3b8', fontSize:'11px'}}>FFA Linoleic %</label>
-                <input type="number" step="0.1" name="ffa_linoleic_c18_2_pct" value={quality.ffa_linoleic_c18_2_pct} onChange={handleQualityChange} required style={{width: '100%', padding: '6px', background: '#0F172A', color: '#fff', border: '1px solid #1E293B', borderRadius: '4px', fontSize:'12px'}} />
+                <label style={{display:'block', marginBottom:'2px', color:'#94a3b8', fontSize:'11px'}}>Detergent Test (0/1)</label>
+                <input type="number" min="0" max="1" name="detergent_test" value={quality.detergent_test} onChange={handleQualityChange} required style={{width: '100%', padding: '6px', background: '#0F172A', color: '#fff', border: '1px solid #1E293B', borderRadius: '4px', fontSize:'12px'}} />
               </div>
             </div>
             

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getRecentBatches, getChain, getUsers, submitCollectionEvent } from '../api';
+import { getRecentBatches, getChain, getUsers, submitCollectionEvent, submitQualityReport } from '../api';
 import VolumeChart from '../components/VolumeChart';
 
 function FlagPill({ isSafe }) {
@@ -17,6 +17,15 @@ export default function FarmerDashboard({ user }) {
   const [centerId, setCenterId] = useState('');
   const [volume, setVolume] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  
+  // Quality State
+  const [quality, setQuality] = useState({
+    fat_percentage: '',
+    snf_percentage: '',
+    ph_level: '',
+    temperature_c: ''
+  });
+
   const [submitResult, setSubmitResult] = useState(null);
 
   const fetchData = async () => {
@@ -27,8 +36,6 @@ export default function FarmerDashboard({ user }) {
       const enriched = await Promise.all(batches.map(async (b) => {
         try {
           const chain = await getChain(b.id);
-          const farmerStage = chain.stages.find(s => s.role === 'farmer');
-          // check if there's any parameter
           const isSafe = chain.overall_status === 'safe';
           return {
             date: b.collection_date || b.timestamp.split('T')[0],
@@ -61,22 +68,51 @@ export default function FarmerDashboard({ user }) {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 15000);
+    const interval = setInterval(fetchData, 10000);
     return () => clearInterval(interval);
   }, []);
+
+  const handleQualityChange = (e) => {
+    setQuality({...quality, [e.target.name]: e.target.value});
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitResult(null);
     try {
+      // 1. Submit Collection Event
       const res = await submitCollectionEvent({
         farmer_id: user.id,
         center_id: parseInt(centerId),
         volume_liters: parseFloat(volume),
         collection_date: date
       });
-      setSubmitResult({ success: true, batchId: res.batch_id });
+      
+      const batchId = res.batch_id;
+      
+      // 2. Submit Quality Report
+      await submitQualityReport({
+        batch_id: batchId,
+        fat_percentage: parseFloat(quality.fat_percentage),
+        snf_percentage: parseFloat(quality.snf_percentage),
+        ph_level: parseFloat(quality.ph_level),
+        temperature_c: parseFloat(quality.temperature_c),
+        // default missing values for farmer check
+        peroxidase_activity: 1.0,
+        enose_sensor_s02: 0.0,
+        formalin_test: 0,
+        enose_sensor_s01: 0.0,
+        formaldehyde_ppm: 0.0,
+        ffa_linoleic_c18_2_pct: 0.0,
+        urea_mg: 0.0,
+        water_addition_pct: 0.0,
+        starch_test: 0,
+        detergent_test: 0
+      });
+
+      setSubmitResult({ success: true, batchId: batchId });
       setVolume('');
+      setQuality({ fat_percentage: '', snf_percentage: '', ph_level: '', temperature_c: '' });
       fetchData(); // refresh immediately
     } catch (err) {
       setSubmitResult({ success: false, message: err.message });
@@ -129,7 +165,7 @@ export default function FarmerDashboard({ user }) {
       <div className="grid-2">
         <div className="panel">
           <h3>Add Collection Entry</h3>
-          <div className="sub">Record new milk collection</div>
+          <div className="sub">Record new milk collection & base quality</div>
           <form onSubmit={handleSubmit} style={{marginTop: '15px'}}>
             <div style={{marginBottom: '10px'}}>
               <label style={{display:'block', marginBottom:'5px', color:'#94a3b8', fontSize:'12px'}}>Destination Center</label>
@@ -137,14 +173,41 @@ export default function FarmerDashboard({ user }) {
                 {centers.map(c => <option key={c.id} value={c.id}>{c.name || `Center #${c.id}`}</option>)}
               </select>
             </div>
-            <div style={{marginBottom: '10px'}}>
-              <label style={{display:'block', marginBottom:'5px', color:'#94a3b8', fontSize:'12px'}}>Volume (Liters)</label>
-              <input type="number" step="0.1" value={volume} onChange={e => setVolume(e.target.value)} required style={{width: '100%', padding: '8px', background: '#0F172A', color: '#fff', border: '1px solid #1E293B', borderRadius: '4px'}} />
+            
+            <div style={{display:'flex', gap:'10px', marginBottom: '10px'}}>
+              <div style={{flex:1}}>
+                <label style={{display:'block', marginBottom:'5px', color:'#94a3b8', fontSize:'12px'}}>Volume (Liters)</label>
+                <input type="number" step="0.1" value={volume} onChange={e => setVolume(e.target.value)} required style={{width: '100%', padding: '8px', background: '#0F172A', color: '#fff', border: '1px solid #1E293B', borderRadius: '4px'}} />
+              </div>
+              <div style={{flex:1}}>
+                <label style={{display:'block', marginBottom:'5px', color:'#94a3b8', fontSize:'12px'}}>Date</label>
+                <input type="date" value={date} onChange={e => setDate(e.target.value)} required style={{width: '100%', padding: '8px', background: '#0F172A', color: '#fff', border: '1px solid #1E293B', borderRadius: '4px'}} />
+              </div>
             </div>
-            <div style={{marginBottom: '15px'}}>
-              <label style={{display:'block', marginBottom:'5px', color:'#94a3b8', fontSize:'12px'}}>Date</label>
-              <input type="date" value={date} onChange={e => setDate(e.target.value)} required style={{width: '100%', padding: '8px', background: '#0F172A', color: '#fff', border: '1px solid #1E293B', borderRadius: '4px'}} />
+
+            <div style={{marginTop: '20px', marginBottom: '10px', paddingBottom:'5px', borderBottom:'1px solid #1E293B'}}>
+              <h4 style={{margin:0}}>Quality Metrics</h4>
             </div>
+
+            <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom: '15px'}}>
+              <div>
+                <label style={{display:'block', marginBottom:'2px', color:'#94a3b8', fontSize:'11px'}}>Fat %</label>
+                <input type="number" step="0.1" name="fat_percentage" value={quality.fat_percentage} onChange={handleQualityChange} required style={{width: '100%', padding: '6px', background: '#0F172A', color: '#fff', border: '1px solid #1E293B', borderRadius: '4px', fontSize:'12px'}} />
+              </div>
+              <div>
+                <label style={{display:'block', marginBottom:'2px', color:'#94a3b8', fontSize:'11px'}}>SNF %</label>
+                <input type="number" step="0.1" name="snf_percentage" value={quality.snf_percentage} onChange={handleQualityChange} required style={{width: '100%', padding: '6px', background: '#0F172A', color: '#fff', border: '1px solid #1E293B', borderRadius: '4px', fontSize:'12px'}} />
+              </div>
+              <div>
+                <label style={{display:'block', marginBottom:'2px', color:'#94a3b8', fontSize:'11px'}}>pH Level</label>
+                <input type="number" step="0.1" name="ph_level" value={quality.ph_level} onChange={handleQualityChange} required style={{width: '100%', padding: '6px', background: '#0F172A', color: '#fff', border: '1px solid #1E293B', borderRadius: '4px', fontSize:'12px'}} />
+              </div>
+              <div>
+                <label style={{display:'block', marginBottom:'2px', color:'#94a3b8', fontSize:'11px'}}>Temp (°C)</label>
+                <input type="number" step="0.1" name="temperature_c" value={quality.temperature_c} onChange={handleQualityChange} required style={{width: '100%', padding: '6px', background: '#0F172A', color: '#fff', border: '1px solid #1E293B', borderRadius: '4px', fontSize:'12px'}} />
+              </div>
+            </div>
+
             <button type="submit" style={{width: '100%', padding: '10px', background: '#2563EB', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold'}}>Submit Entry</button>
           </form>
           
