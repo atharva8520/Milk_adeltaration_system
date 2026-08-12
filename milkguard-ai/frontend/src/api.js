@@ -22,7 +22,9 @@ async function fetchWithAuth(endpoint, options = {}) {
   
   if (response.status === 401) {
     logout();
-    window.location.href = '/login';
+    if (window.location.pathname !== '/login') {
+      window.location.href = '/login';
+    }
     throw new Error('Unauthorized');
   }
   

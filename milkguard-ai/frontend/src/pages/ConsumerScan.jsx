@@ -9,23 +9,34 @@ export default function ConsumerScan() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleScan = async (e) => {
-    e.preventDefault();
+  const handleScan = async (e, isBackground = false) => {
+    if (e && e.preventDefault) e.preventDefault();
     if (!scanId.trim()) return;
     
-    setLoading(true);
-    setError('');
-    setResult(null);
+    if (!isBackground) {
+      setLoading(true);
+      setError('');
+      setResult(null);
+    }
     
     try {
       const data = await fetchConsumerScan(scanId.trim());
       setResult(data);
+      if (!isBackground) setError('');
     } catch (err) {
-      setError('Invalid Batch ID or product not found.');
+      if (!isBackground) setError('Invalid Batch ID or product not found.');
     } finally {
-      setLoading(false);
+      if (!isBackground) setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!scanId || !result) return;
+    const interval = setInterval(() => {
+      handleScan(null, true);
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [scanId, result]);
 
   return (
     <div className="consumer-scan-page">

@@ -13,19 +13,13 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str
 
-class UserPublic(BaseModel):
-    id: int
-    name: Optional[str] = None
-    role: RoleEnum
-
-    class Config:
-        from_attributes = True
-
 class UserResponse(UserBase):
     id: int
     
     class Config:
         from_attributes = True
+
+UserPublic = UserResponse
 
 class Token(BaseModel):
     access_token: str

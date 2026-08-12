@@ -11,7 +11,6 @@ export default function Pipeline() {
 
   // We want to fetch the chain if batchId is in the URL hash or something, but standard is fine too.
   useEffect(() => {
-    // If the path has a batchId, we could parse it, but let's stick to the search bar as default.
     const urlParams = new URLSearchParams(window.location.search);
     const bId = urlParams.get('batchId');
     if (bId) {
@@ -20,22 +19,35 @@ export default function Pipeline() {
     }
   }, []);
 
-  const fetchPipeline = async (id) => {
-    setLoading(true);
-    setError(null);
-    setChain(null);
+  useEffect(() => {
+    if (!batchId) return;
+    const interval = setInterval(() => {
+      fetchPipeline(batchId, true);
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [batchId]);
+
+  const fetchPipeline = async (id, isBackground = false) => {
+    if (!isBackground) {
+      setLoading(true);
+      setError(null);
+      setChain(null);
+    }
     
     try {
       const data = await getChain(id);
       if (data.error) {
-        setError(data.error);
+        if (!isBackground) setError(data.error);
       } else {
         setChain(data);
+        if (data.red_alert !== undefined) {
+           setError(null);
+        }
       }
     } catch (err) {
-      setError(err.message || "Failed to fetch pipeline data");
+      if (!isBackground) setError(err.message || "Failed to fetch pipeline data");
     } finally {
-      setLoading(false);
+      if (!isBackground) setLoading(false);
     }
   };
 
