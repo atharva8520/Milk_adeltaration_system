@@ -35,13 +35,15 @@ def setup_data():
     
     farmer = models.User(email="farmer@e2e.com", hashed_password=auth.get_password_hash("pw"), role=models.RoleEnum.FARMER)
     center = models.User(email="center@e2e.com", hashed_password=auth.get_password_hash("pw"), role=models.RoleEnum.MIDDLEMAN)
+    manufacturer = models.User(email="factory@e2e.com", hashed_password=auth.get_password_hash("pw"), role=models.RoleEnum.MANUFACTURER)
     consumer = models.User(email="consumer@e2e.com", hashed_password=auth.get_password_hash("pw"), role=models.RoleEnum.CONSUMER)
     admin = models.User(email="admin@e2e.com", hashed_password=auth.get_password_hash("pw"), role=models.RoleEnum.ADMIN)
-    db.add_all([farmer, center, consumer, admin])
+    db.add_all([farmer, center, manufacturer, consumer, admin])
     db.commit()
     
     farmer_id = farmer.id
     center_id = center.id
+    manufacturer_id = manufacturer.id
     consumer_id = consumer.id
     admin_id = admin.id
     
@@ -62,6 +64,7 @@ def setup_data():
     return {
         "farmer_id": farmer_id,
         "center_id": center_id,
+        "manufacturer_id": manufacturer_id,
         "consumer_id": consumer_id,
         "token": token,
         "admin_token": admin_token
@@ -90,6 +93,7 @@ def test_2_normal_flow(setup_data):
     
     res = requests.post(f"{API_BASE}/engine-a/center-events", json={
         "center_id": setup_data["center_id"],
+        "destination_id": setup_data["manufacturer_id"],
         "volume_out_liters": 17.5,
         "collection_date": d,
         "parent_batch_ids": [batch_id]
@@ -118,6 +122,7 @@ def test_3_fraud_flow(setup_data):
     # 2. Middleman Fraud
     res = requests.post(f"{API_BASE}/engine-a/center-events", json={
         "center_id": setup_data["center_id"],
+        "destination_id": setup_data["manufacturer_id"],
         "volume_out_liters": 50.0, # Received 40
         "collection_date": d,
         "parent_batch_ids": [farmer_batch_id]
@@ -189,6 +194,65 @@ def test_5_traceability_and_reporting():
     assert len(report["flags"]) > 0
     assert len(report["quality_reports"]) > 0
     assert report["traceability_backward"] is not None
+
+def test_6_factory_and_chain(setup_data):
+    d = datetime.utcnow().strftime("%Y-%m-%d")
+    # Farmer -> Center -> Factory
+    # 1. Farmer collection
+    res = requests.post(f"{API_BASE}/engine-a/collection-events", json={
+        "farmer_id": setup_data["farmer_id"],
+        "center_id": setup_data["center_id"],
+        "volume_liters": 20.0,
+        "collection_date": d
+    })
+    farmer_batch = res.json()["batch_id"]
+    
+    # 2. Center forward to Factory
+    res = requests.post(f"{API_BASE}/engine-a/center-events", json={
+        "center_id": setup_data["center_id"],
+        "destination_id": setup_data["manufacturer_id"],
+        "volume_out_liters": 20.0,
+        "collection_date": d,
+        "parent_batch_ids": [farmer_batch]
+    })
+    center_batch = res.json()["batch_id"]
+    
+    # 3. Factory forward
+    res = requests.post(f"{API_BASE}/engine-a/factory-events", json={
+        "factory_id": setup_data["manufacturer_id"],
+        "volume_out_liters": 20.0,
+        "collection_date": d,
+        "parent_batch_ids": [center_batch]
+    })
+    assert res.status_code == 200
+    factory_batch = res.json()["batch_id"]
+    
+    # 4. Add quality report to center_batch
+    headers = {"Authorization": f"Bearer {setup_data['token']}"}
+    requests.post(f"{API_BASE}/quality-reports", headers=headers, json={
+        "batch_id": center_batch,
+        "fat_percentage": 4.0,
+        "snf_percentage": 8.5,
+        "ph_level": 6.7,
+        "peroxidase_activity": 1.0,
+        "enose_sensor_s02": 0.22,
+        "formalin_test": 0,
+        "enose_sensor_s01": 0.28,
+        "formaldehyde_ppm": 0.0,
+        "ffa_linoleic_c18_2_pct": 3.4
+    })
+    
+    # 5. Fetch chain for factory_batch
+    res = requests.get(f"{API_BASE}/chain/{factory_batch}")
+    assert res.status_code == 200
+    chain_data = res.json()
+    assert chain_data["unique_id"] == factory_batch
+    assert len(chain_data["stages"]) >= 3 # Farmer, Center, Factory
+    
+    roles = [s["role"] for s in chain_data["stages"]]
+    assert "farmer" in roles
+    assert "middleman" in roles
+    assert "manufacturer" in roles
 
 def test_8_negative_paths():
     # Malformed data

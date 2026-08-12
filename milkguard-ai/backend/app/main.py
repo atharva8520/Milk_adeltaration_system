@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from datetime import timedelta
 from typing import List, Optional
 
-from . import models, schemas, auth, database, engine_a, engine_b, engine_c, traceability, consumer
+from . import models, schemas, auth, database, engine_a, engine_b, engine_c, traceability, consumer, chain
 from .database import engine
 from prometheus_fastapi_instrumentator import Instrumentator
 from fastapi.middleware.cors import CORSMiddleware
@@ -73,6 +73,13 @@ import uuid
 def read_users_me(current_user: models.User = Depends(auth.get_current_user)):
     return current_user
 
+@app.get("/users", response_model=List[schemas.UserPublic])
+def read_users(role: Optional[str] = None, db: Session = Depends(database.get_db)):
+    query = db.query(models.User)
+    if role:
+        query = query.filter(models.User.role == role)
+    return query.all()
+
 @app.post("/batches", response_model=schemas.BatchResponse)
 def create_batch(batch: schemas.BatchCreate, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(database.get_db)):
     batch_id = str(uuid.uuid4())
@@ -123,6 +130,15 @@ def create_quality_report(report: schemas.QualityReportCreate, current_user: mod
     
     new_report = models.QualityReport(
         batch_id=report.batch_id,
+        fat_percentage=report.fat_percentage,
+        snf_percentage=report.snf_percentage,
+        ph_level=report.ph_level,
+        peroxidase_activity=report.peroxidase_activity,
+        enose_sensor_s02=report.enose_sensor_s02,
+        formalin_test=report.formalin_test,
+        enose_sensor_s01=report.enose_sensor_s01,
+        formaldehyde_ppm=report.formaldehyde_ppm,
+        ffa_linoleic_c18_2_pct=report.ffa_linoleic_c18_2_pct,
         is_safe=not is_adulterated,
         ml_confidence_score=confidence
     )
@@ -162,6 +178,15 @@ def ingest_collection_event(event: schemas.CollectionEvent, db: Session = Depend
 def ingest_center_event(event: schemas.CenterEvent, db: Session = Depends(database.get_db)):
     batch = engine_a.process_center_forwarding(db, event)
     return {"message": "Center event processed", "batch_id": batch.id}
+
+@app.post("/engine-a/factory-events")
+def ingest_factory_event(event: schemas.FactoryEvent, db: Session = Depends(database.get_db)):
+    batch = engine_a.process_factory_forwarding(db, event)
+    return {"message": "Factory event processed", "batch_id": batch.id}
+
+@app.get("/chain/{batch_id}")
+def get_chain(batch_id: str, db: Session = Depends(database.get_db)):
+    return chain.get_pipeline(db, batch_id)
 @app.get("/flags", response_model=List[schemas.FlagResponse])
 def get_flags(
     entity_type: Optional[str] = None, 
@@ -172,15 +197,38 @@ def get_flags(
     query = db.query(models.Flag)
     
     # Role-based scoping
-    if current_user.role in [models.RoleEnum.FARMER, models.RoleEnum.MIDDLEMAN, models.RoleEnum.MANUFACTURER, models.RoleEnum.CONSUMER]:
+    if current_user.role in [models.RoleEnum.FARMER, models.RoleEnum.MIDDLEMAN, models.RoleEnum.MANUFACTURER]:
         # Filter to only show flags belonging to their specific entity ID
         query = query.filter(models.Flag.entity_id == str(current_user.id))
+    elif current_user.role == models.RoleEnum.CONSUMER:
+        # Consumer sees flags for entities in the trace of batches delivered to them
+        deliveries = db.query(models.Batch).filter(models.Batch.destination_id == current_user.id).all()
+        allowed_entity_ids = {str(current_user.id)}
+        
+        def extract_ids(node):
+            if not node: return
+            allowed_entity_ids.add(str(node.source_id))
+            if node.destination_id: allowed_entity_ids.add(str(node.destination_id))
+            if node.parents:
+                for p in node.parents: extract_ids(p)
+                
+        for d in deliveries:
+            node = traceability.get_backward_trace(db, d.id)
+            extract_ids(node)
+            
+        query = query.filter(models.Flag.entity_id.in_(list(allowed_entity_ids)))
         
     if entity_type:
         query = query.filter(models.Flag.entity_type == entity_type)
     if entity_id:
         # Prevent users from circumventing the scope by providing a different entity_id
-        if current_user.role not in [models.RoleEnum.FARMER, models.RoleEnum.MIDDLEMAN, models.RoleEnum.MANUFACTURER, models.RoleEnum.CONSUMER] or entity_id == str(current_user.id):
+        if current_user.role in [models.RoleEnum.FARMER, models.RoleEnum.MIDDLEMAN, models.RoleEnum.MANUFACTURER]:
+            if entity_id != str(current_user.id):
+                query = query.filter(models.Flag.entity_id == entity_id) # This will naturally return empty since we already filtered by current_user.id
+        elif current_user.role == models.RoleEnum.CONSUMER:
+            if entity_id not in allowed_entity_ids:
+                query = query.filter(models.Flag.entity_id == entity_id) # Same logic
+        else:
             query = query.filter(models.Flag.entity_id == entity_id)
             
     return query.order_by(models.Flag.created_at.desc()).all()

@@ -8,7 +8,7 @@ import uuid
 
 # Configurable constants
 MAX_FARMER_OVER_CAPACITY_PCT = 0.15 # 15%
-MAX_MIDDLEMAN_LOSS_PCT = 0.02 # 2% loss tolerance
+MAX_LOSS_TOLERANCE_PCT = 0.02 # 2% loss tolerance
 SPIKE_Z_SCORE_THRESHOLD = 3.0 # Z-score for spike detection
 
 def generate_flag(db: Session, entity_type: str, entity_id: str, flag_type: str, severity: str, details: dict):
@@ -78,25 +78,25 @@ def check_farmer_volume_spike(db: Session, farmer_id: int, declared_volume: floa
             "z_score": z_score
         })
 
-def check_middleman_reconciliation(db: Session, center_id: int, target_volume: float, parent_batch_ids: list[str]):
+def check_reconciliation(db: Session, entity_type: str, entity_id: int, target_volume: float, parent_batch_ids: list[str]):
     if not parent_batch_ids:
         # Invalid input, not a data fraud flag but an error
-        raise HTTPException(status_code=400, detail="Middleman must provide parent_batch_ids to aggregate.")
+        raise HTTPException(status_code=400, detail=f"{entity_type} must provide parent_batch_ids to aggregate.")
         
-    # Fetch all parent batches that are directed to this middleman
+    # Fetch all parent batches that are directed to this entity
     parent_batches = db.query(models.Batch).filter(
         models.Batch.id.in_(parent_batch_ids),
-        models.Batch.destination_id == center_id
+        models.Batch.destination_id == entity_id
     ).all()
     
     if len(parent_batches) != len(parent_batch_ids):
-        raise HTTPException(status_code=400, detail="One or more parent batches not found or not assigned to this middleman.")
+        raise HTTPException(status_code=400, detail=f"One or more parent batches not found or not assigned to this {entity_type}.")
         
     total_input = sum([batch.volume_liters for batch in parent_batches])
     
     # Check if they are forwarding MORE than what they received (plus tolerance)
-    if target_volume > (total_input * (1 + MAX_MIDDLEMAN_LOSS_PCT)):
-        generate_flag(db, "Center", str(center_id), "Output Exceeds Input", "critical", {
+    if target_volume > (total_input * (1 + MAX_LOSS_TOLERANCE_PCT)):
+        generate_flag(db, entity_type, str(entity_id), "Output Exceeds Input", "critical", {
             "total_input": total_input,
             "target_volume_out": target_volume,
             "discrepancy": target_volume - total_input
@@ -129,7 +129,7 @@ def process_center_forwarding(db: Session, event: schemas.CenterEvent):
     date_str = event.collection_date or datetime.utcnow().strftime("%Y-%m-%d")
     
     # 1. Reconciliation check
-    check_middleman_reconciliation(db, event.center_id, event.volume_out_liters, event.parent_batch_ids)
+    check_reconciliation(db, "Center", event.center_id, event.volume_out_liters, event.parent_batch_ids)
     
     # 2. Mark parent batches as aggregated
     db.query(models.Batch).filter(models.Batch.id.in_(event.parent_batch_ids)).update({"status": "aggregated"}, synchronize_session=False)
@@ -138,6 +138,30 @@ def process_center_forwarding(db: Session, event: schemas.CenterEvent):
     batch = models.Batch(
         id=str(uuid.uuid4()),
         source_id=event.center_id,
+        destination_id=event.destination_id,
+        volume_liters=event.volume_out_liters,
+        collection_date=date_str,
+        status="processed",
+        parent_batch_ids=event.parent_batch_ids
+    )
+    db.add(batch)
+    db.commit()
+    db.refresh(batch)
+    return batch
+
+def process_factory_forwarding(db: Session, event: schemas.FactoryEvent):
+    date_str = event.collection_date or datetime.utcnow().strftime("%Y-%m-%d")
+    
+    # 1. Reconciliation check
+    check_reconciliation(db, "Manufacturer", event.factory_id, event.volume_out_liters, event.parent_batch_ids)
+    
+    # 2. Mark parent batches as aggregated
+    db.query(models.Batch).filter(models.Batch.id.in_(event.parent_batch_ids)).update({"status": "aggregated"}, synchronize_session=False)
+    
+    # 3. Create the new forwarded batch
+    batch = models.Batch(
+        id=str(uuid.uuid4()),
+        source_id=event.factory_id,
         volume_liters=event.volume_out_liters,
         collection_date=date_str,
         status="processed",

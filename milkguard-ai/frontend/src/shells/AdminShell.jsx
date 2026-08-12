@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
-import { Home, Users, CheckSquare, Settings, Bell, Map as MapIcon, ShieldCheck, Factory, Archive, BarChart2, Store } from 'lucide-react';
+import { Home, Users, CheckSquare, Settings, Bell, Map as MapIcon, ShieldCheck, Factory, Archive, BarChart2, Store, Activity, LogOut } from 'lucide-react';
 import AdminDashboard from '../pages/AdminDashboard';
+import Pipeline from '../pages/Pipeline';
+import { logout } from '../api';
 
 export default function AdminShell({ user, globalRoleSwitcher }) {
   const [activeTab, setActiveTab] = useState('dashboard');
 
   const navItems = [
     { id: 'dashboard', icon: <Home size={18} />, label: 'Dashboard' },
+    { id: 'pipeline', icon: <Activity size={18} />, label: 'Pipeline' },
     { id: 'farmers', icon: <Users size={18} />, label: 'Farmers' },
     { id: 'livestock', icon: <Archive size={18} />, label: 'Livestock' },
     { id: 'batches', icon: <CheckSquare size={18} />, label: 'Batches' },
@@ -23,6 +26,7 @@ export default function AdminShell({ user, globalRoleSwitcher }) {
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard': return <AdminDashboard user={user} />;
+      case 'pipeline': return <Pipeline />;
       default: return <div style={{padding:'20px'}}><h3>{activeTab.toUpperCase()} Module</h3><p>Interactive mock module coming soon.</p></div>;
     }
   };
@@ -46,6 +50,14 @@ export default function AdminShell({ user, globalRoleSwitcher }) {
               <span>{item.label}</span>
             </button>
           ))}
+          <button 
+            className="nav-item"
+            onClick={() => { logout(); window.location.href = '/login'; }}
+            style={{ background: 'transparent', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer', marginTop: 'auto' }}
+          >
+            <LogOut size={18} />
+            <span>Logout</span>
+          </button>
         </nav>
       </aside>
       <main className="main-content">
@@ -55,7 +67,6 @@ export default function AdminShell({ user, globalRoleSwitcher }) {
             <span className="status-text">Enterprise Command Center</span>
           </div>
           <div className="user-profile" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            {globalRoleSwitcher}
           </div>
         </header>
         <div className="content-container">

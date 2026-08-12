@@ -13,6 +13,14 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str
 
+class UserPublic(BaseModel):
+    id: int
+    name: Optional[str] = None
+    role: RoleEnum
+
+    class Config:
+        from_attributes = True
+
 class UserResponse(UserBase):
     id: int
     
@@ -58,11 +66,6 @@ class LivestockResponse(LivestockBase):
     class Config:
         from_attributes = True
 
-class QualityReportBase(BaseModel):
-    batch_id: str
-    peroxidase_activity: float
-    enose_sensor_s02: float
-    formalin_test: int
 class QualityReportBase(BaseModel):
     batch_id: str
     fat_percentage: float
@@ -160,6 +163,13 @@ class ConsumerScanResponse(BaseModel):
 
 class CenterEvent(BaseModel):
     center_id: int
+    volume_out_liters: float
+    collection_date: Optional[str] = None
+    parent_batch_ids: list[str]
+    destination_id: int
+
+class FactoryEvent(BaseModel):
+    factory_id: int
     volume_out_liters: float
     collection_date: Optional[str] = None
     parent_batch_ids: list[str]

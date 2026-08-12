@@ -22,7 +22,7 @@ export default function AdminDashboard({ user }) {
   const [batches, setBatches] = useState([]);
   const [locations, setLocations] = useState([]);
 
-  useEffect(() => {
+    useEffect(() => {
     async function loadData() {
       try {
         const sumData = await getDashboardSummary();
@@ -38,6 +38,8 @@ export default function AdminDashboard({ user }) {
       }
     }
     loadData();
+    const intervalId = setInterval(loadData, 15000);
+    return () => clearInterval(intervalId);
   }, []);
 
   useEffect(() => {

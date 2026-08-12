@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getRecentBatches, getUsers, submitCenterEvent, submitQualityReport } from '../api';
+import { getRecentBatches, submitFactoryEvent, submitQualityReport } from '../api';
 import VolumeChart from '../components/VolumeChart';
 
 function FlagPill({ isSafe }) {
@@ -8,14 +8,12 @@ function FlagPill({ isSafe }) {
     : <span className="flag-pill alert"><span className="dot"></span>Flagged</span>;
 }
 
-export default function CenterDashboard({ user }) {
+export default function ManufacturerDashboard({ user }) {
   const [incoming, setIncoming] = useState([]);
   const [outgoing, setOutgoing] = useState([]);
-  const [factories, setFactories] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Form State
-  const [destinationId, setDestinationId] = useState('');
   const [parentBatchIds, setParentBatchIds] = useState([]);
   const [volume, setVolume] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -38,18 +36,10 @@ export default function CenterDashboard({ user }) {
   const fetchData = async () => {
     try {
       const batches = await getRecentBatches(20);
-      // Filter incoming (destination = me) vs outgoing (source = me)
       const inc = batches.filter(b => b.destination_id === user.id);
       const out = batches.filter(b => b.source_id === user.id);
-      
       setIncoming(inc);
       setOutgoing(out);
-      
-      const mfrs = await getUsers('manufacturer');
-      setFactories(mfrs);
-      if (mfrs.length > 0 && !destinationId) {
-        setDestinationId(mfrs[0].id);
-      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -71,10 +61,9 @@ export default function CenterDashboard({ user }) {
     e.preventDefault();
     setSubmitResult(null);
     try {
-      // 1. Submit Event
-      const res = await submitCenterEvent({
-        center_id: user.id,
-        destination_id: parseInt(destinationId),
+      // 1. Submit Factory Event
+      const res = await submitFactoryEvent({
+        factory_id: user.id,
         volume_out_liters: parseFloat(volume),
         collection_date: date,
         parent_batch_ids: parentBatchIds
@@ -120,12 +109,12 @@ export default function CenterDashboard({ user }) {
     <div>
       <div className="content-header">
         <div>
-          <h1>Collection Center Dashboard</h1>
-          <div className="sub">Reconcile incoming vs. outgoing volume and report quality.</div>
+          <h1>Manufacturer Dashboard</h1>
+          <div className="sub">Process incoming batches and certify output quality.</div>
         </div>
         <div className="user-chip">
-          <div className="avatar">{user.name ? user.name.charAt(0) : 'C'}</div>
-          <div><div className="name">{user.name || `Center #${user.id}`}</div><div className="role">Middleman</div></div>
+          <div className="avatar">{user.name ? user.name.charAt(0) : 'M'}</div>
+          <div><div className="name">{user.name || `Factory #${user.id}`}</div><div className="role">Manufacturer</div></div>
         </div>
       </div>
       
@@ -143,40 +132,38 @@ export default function CenterDashboard({ user }) {
           <div className="val">{totalOut.toFixed(1)} L</div>
         </div>
         <div className="stat-card">
-          <div className="lbl">Reconciliation Variance</div>
+          <div className="lbl">Loss / Yield</div>
           <div className="val">{variance.toFixed(1)}%</div>
-          {variance > 2 && <div className="delta warn">Needs review</div>}
         </div>
       </div>
 
       <div className="grid-2">
         <div className="panel">
-          <h3>Forward Batch & Quality Report</h3>
-          <div className="sub">Combine incoming batches and forward with quality metrics</div>
+          <h3>Process & Output Batch</h3>
+          <div className="sub">Aggregate incoming shipments and certify processed product</div>
           <form onSubmit={handleSubmit} style={{marginTop: '15px'}}>
             <div style={{marginBottom: '10px'}}>
-              <label style={{display:'block', marginBottom:'5px', color:'#94a3b8', fontSize:'12px'}}>Select Incoming Batches to Forward</label>
+              <label style={{display:'block', marginBottom:'5px', color:'#94a3b8', fontSize:'12px'}}>Select Incoming Batches to Process</label>
               <select multiple value={parentBatchIds} onChange={e => setParentBatchIds(Array.from(e.target.selectedOptions, option => option.value))} required style={{width: '100%', padding: '8px', background: '#0F172A', color: '#fff', border: '1px solid #1E293B', borderRadius: '4px', height: '80px'}}>
-                {incoming.filter(b => b.status !== 'aggregated').map(b => (
+                {incoming.filter(b => b.status !== 'processed').map(b => (
                   <option key={b.id} value={b.id}>{b.id.substring(0,8)} ({b.volume_liters}L)</option>
                 ))}
               </select>
             </div>
+            
             <div style={{display:'flex', gap:'10px', marginBottom: '10px'}}>
               <div style={{flex:1}}>
-                <label style={{display:'block', marginBottom:'5px', color:'#94a3b8', fontSize:'12px'}}>Destination Factory</label>
-                <select value={destinationId} onChange={e => setDestinationId(e.target.value)} required style={{width: '100%', padding: '8px', background: '#0F172A', color: '#fff', border: '1px solid #1E293B', borderRadius: '4px'}}>
-                  {factories.map(f => <option key={f.id} value={f.id}>{f.name || `Factory #${f.id}`}</option>)}
-                </select>
+                <label style={{display:'block', marginBottom:'5px', color:'#94a3b8', fontSize:'12px'}}>Output Volume (Liters)</label>
+                <input type="number" step="0.1" value={volume} onChange={e => setVolume(e.target.value)} required style={{width: '100%', padding: '8px', background: '#0F172A', color: '#fff', border: '1px solid #1E293B', borderRadius: '4px'}} />
               </div>
               <div style={{flex:1}}>
-                <label style={{display:'block', marginBottom:'5px', color:'#94a3b8', fontSize:'12px'}}>Volume Out (L)</label>
-                <input type="number" step="0.1" value={volume} onChange={e => setVolume(e.target.value)} required style={{width: '100%', padding: '8px', background: '#0F172A', color: '#fff', border: '1px solid #1E293B', borderRadius: '4px'}} />
+                <label style={{display:'block', marginBottom:'5px', color:'#94a3b8', fontSize:'12px'}}>Processing Date</label>
+                <input type="date" value={date} onChange={e => setDate(e.target.value)} required style={{width: '100%', padding: '8px', background: '#0F172A', color: '#fff', border: '1px solid #1E293B', borderRadius: '4px'}} />
               </div>
             </div>
             
             <div style={{marginTop: '20px', marginBottom: '10px', paddingBottom:'5px', borderBottom:'1px solid #1E293B'}}>
-              <h4 style={{margin:0}}>Quality Metrics</h4>
+              <h4 style={{margin:0}}>Final Quality Certification</h4>
             </div>
             
             <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom: '15px'}}>
@@ -218,13 +205,13 @@ export default function CenterDashboard({ user }) {
               </div>
             </div>
             
-            <button type="submit" style={{width: '100%', padding: '10px', background: '#2563EB', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold'}}>Submit Forward & Quality</button>
+            <button type="submit" style={{width: '100%', padding: '10px', background: '#2563EB', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold'}}>Generate Output Batch</button>
           </form>
           
           {submitResult && (
             <div style={{marginTop: '15px', padding: '10px', borderRadius: '4px', background: submitResult.success ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)', color: submitResult.success ? '#10B981' : '#EF4444', fontSize: '13px'}}>
               {submitResult.success ? (
-                <><strong>Success!</strong><br/>Batch ID: <code style={{userSelect:'all'}}>{submitResult.batchId}</code></>
+                <><strong>Success!</strong><br/>Final Batch ID: <code style={{userSelect:'all'}}>{submitResult.batchId}</code></>
               ) : (
                 <><strong>Error:</strong> {submitResult.message}</>
               )}
@@ -235,7 +222,7 @@ export default function CenterDashboard({ user }) {
         <div style={{display:'flex', flexDirection:'column', gap: '20px'}}>
           <div className="panel">
             <h3>Recent Outgoing Batches</h3>
-            <div className="sub">Forwarded from this center</div>
+            <div className="sub">Processed and ready for consumers</div>
             <div className="side-list">
               {outgoing.slice(0, 5).map((r, i) => (
                 <div key={i} className="side-row" style={{display:'flex', justifyContent:'space-between'}}>
@@ -248,7 +235,7 @@ export default function CenterDashboard({ user }) {
           
           <div className="panel">
             <h3>Incoming Volume Trend</h3>
-            <div className="sub">From Farmers</div>
+            <div className="sub">From Centers</div>
             <div className="chart-wrap" style={{height:'200px'}}>
                <VolumeChart values={incoming.slice().reverse().map(r=>r.volume_liters)} labels={incoming.slice().reverse().map(r=>(r.collection_date||r.timestamp.split('T')[0]).slice(5))} />
             </div>

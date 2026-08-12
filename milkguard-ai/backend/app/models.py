@@ -59,6 +59,12 @@ class QualityReport(Base):
     fat_percentage = Column(Float)
     snf_percentage = Column(Float)
     ph_level = Column(Float)
+    peroxidase_activity = Column(Float, nullable=True)
+    enose_sensor_s02 = Column(Float, nullable=True)
+    formalin_test = Column(Integer, nullable=True)
+    enose_sensor_s01 = Column(Float, nullable=True)
+    formaldehyde_ppm = Column(Float, nullable=True)
+    ffa_linoleic_c18_2_pct = Column(Float, nullable=True)
     adulterants_detected = Column(JSON, nullable=True) # E.g., {"water": 5, "starch": 0}
     ml_confidence_score = Column(Float, nullable=True)
     is_safe = Column(Boolean, default=True)
