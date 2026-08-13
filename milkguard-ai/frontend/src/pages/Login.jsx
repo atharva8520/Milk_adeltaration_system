@@ -4,9 +4,9 @@ import { ShieldAlert } from 'lucide-react';
 import { login } from '../api';
 import './Login.css';
 
-export default function Login() {
-  const [username, setUsername] = useState('center@e2e.com');
-  const [password, setPassword] = useState('pw');
+export default function Login({ onLoginSuccess }) {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
@@ -14,6 +14,7 @@ export default function Login() {
     e.preventDefault();
     try {
       await login(username, password);
+      if (onLoginSuccess) onLoginSuccess();
       navigate('/');
     } catch (err) {
       setError('Invalid credentials');

@@ -39,11 +39,16 @@ function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const refreshUser = () => {
+    setLoading(true);
     fetchUser().then(data => {
       setUser(data);
       setLoading(false);
     });
+  };
+
+  useEffect(() => {
+    refreshUser();
   }, []);
 
   if (loading) return <div style={{padding:'20px'}}>Loading MilkGuard AI...</div>;
@@ -51,7 +56,7 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={<Login />} />
+        <Route path="/login" element={<Login onLoginSuccess={refreshUser} />} />
         <Route path="/" element={user ? <MasterShell user={user} /> : <Navigate to="/login" />} />
         <Route path="/scan" element={<ConsumerScan />} />
         <Route path="/quick-check" element={<ConsumerQuickCheck />} />

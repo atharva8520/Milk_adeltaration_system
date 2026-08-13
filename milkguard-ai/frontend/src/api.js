@@ -1,11 +1,11 @@
 const API_BASE = 'http://localhost:8000';
 
 export function getToken() {
-  return localStorage.getItem('milkguard_token');
+  return sessionStorage.getItem('milkguard_token');
 }
 
 export function logout() {
-  localStorage.removeItem('milkguard_token');
+  sessionStorage.removeItem('milkguard_token');
 }
 
 async function fetchWithAuth(endpoint, options = {}) {
@@ -45,7 +45,7 @@ export async function login(username, password) {
 
   if (!response.ok) throw new Error('Login failed');
   const data = await response.json();
-  localStorage.setItem('milkguard_token', data.access_token);
+  sessionStorage.setItem('milkguard_token', data.access_token);
   return data.access_token;
 }
 
