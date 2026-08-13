@@ -73,7 +73,7 @@ import uuid
 def read_users_me(current_user: models.User = Depends(auth.get_current_user)):
     return current_user
 
-@app.get("/users", response_model=List[schemas.UserResponse])
+@app.get("/users", response_model=List[schemas.UserPublic])
 def read_users(role: Optional[str] = None, db: Session = Depends(database.get_db)):
     query = db.query(models.User)
     if role:

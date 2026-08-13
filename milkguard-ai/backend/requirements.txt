@@ -8,6 +8,7 @@ python-jose[cryptography]==3.3.0
 pydantic-settings==2.1.0
 pydantic[email]
 python-multipart==0.0.9
+requests
 redis==5.0.1
 alembic==1.13.1
 joblib

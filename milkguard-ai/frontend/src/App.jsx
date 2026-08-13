@@ -10,6 +10,7 @@ import AdminShell from './shells/AdminShell';
 import Login from './pages/Login';
 import ConsumerDashboard from './pages/ConsumerDashboard';
 import ConsumerScan from './pages/ConsumerScan';
+import ConsumerQuickCheck from './pages/ConsumerQuickCheck';
 import Pipeline from './pages/Pipeline';
 import './App.css';
 
@@ -25,6 +26,9 @@ function MasterShell({ user }) {
       return <CenterShell user={user} />;
     case 'manufacturer':
       return <ManufacturerShell user={user} />;
+    case 'consumer':
+      return <ConsumerDashboard user={user} />;
+    case 'government':
     case 'admin':
     default:
       return <AdminShell user={user} />;
@@ -50,7 +54,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/" element={user ? <MasterShell user={user} /> : <Navigate to="/login" />} />
         <Route path="/scan" element={<ConsumerScan />} />
-        <Route path="/quick-check" element={<ConsumerDashboard />} />
+        <Route path="/quick-check" element={<ConsumerQuickCheck />} />
         {/* Pipeline is also accessible standalone, but will be integrated into Shells as well */}
         <Route path="/pipeline" element={<Pipeline />} />
       </Routes>

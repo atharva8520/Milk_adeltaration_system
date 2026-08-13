@@ -19,7 +19,13 @@ class UserResponse(UserBase):
     class Config:
         from_attributes = True
 
-UserPublic = UserResponse
+class UserPublic(BaseModel):
+    id: int
+    name: Optional[str] = None
+    role: RoleEnum
+
+    class Config:
+        from_attributes = True
 
 class Token(BaseModel):
     access_token: str
