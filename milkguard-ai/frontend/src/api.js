@@ -8,7 +8,7 @@ export function logout() {
   sessionStorage.removeItem('milkguard_token');
 }
 
-async function fetchWithAuth(endpoint, options = {}) {
+export async function fetchWithAuth(endpoint, options = {}) {
   const token = getToken();
   const headers = {
     ...options.headers,

@@ -141,7 +141,7 @@ def process_center_forwarding(db: Session, event: schemas.CenterEvent):
         destination_id=event.destination_id,
         volume_liters=event.volume_out_liters,
         collection_date=date_str,
-        status="processed",
+        status="in_transit",
         parent_batch_ids=event.parent_batch_ids
     )
     db.add(batch)

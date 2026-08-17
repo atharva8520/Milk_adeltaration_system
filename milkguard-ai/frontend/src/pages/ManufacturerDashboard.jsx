@@ -42,8 +42,8 @@ export default function ManufacturerDashboard({ user }) {
   const fetchData = async () => {
     try {
       const batches = await getRecentBatches(30);
-      const inc = batches.filter(b => b.destination_id === user.id);
-      const out = batches.filter(b => b.source_id === user.id);
+      const inc = batches.filter(b => b.destination_id == user.id);
+      const out = batches.filter(b => b.source_id == user.id || (b.source_id === undefined && b.status === 'processed'));
       setIncoming(inc);
       setOutgoing(out);
     } catch (e) {
@@ -162,8 +162,8 @@ export default function ManufacturerDashboard({ user }) {
               <label style={{display:'block', marginBottom:'5px', color:'#94a3b8', fontSize:'12px'}}>Select Incoming Batch to Process</label>
               <select value={parentBatchId} onChange={e => setParentBatchId(e.target.value)} required style={{width: '100%', padding: '8px', background: '#0F172A', color: '#fff', border: '1px solid #1E293B', borderRadius: '4px'}}>
                 <option value="">-- Select Batch --</option>
-                {incoming.filter(b => b.status !== 'processed').map(b => (
-                  <option key={b.id} value={b.id}>{b.id.substring(0,8)} ({b.volume_liters}L)</option>
+                {incoming.map(b => (
+                  <option key={b.id} value={b.id}>{b.id.substring(0,8)} ({b.volume_liters}L) - {b.status}</option>
                 ))}
               </select>
             </div>

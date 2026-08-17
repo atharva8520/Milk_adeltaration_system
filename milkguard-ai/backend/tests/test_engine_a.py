@@ -34,7 +34,7 @@ def setup_farmer_and_livestock(db, expected_yield=20.0):
 
 def test_farmer_capacity_normal(db):
     farmer_id = setup_farmer_and_livestock(db, expected_yield=20.0)
-    event = CollectionEvent(farmer_id=farmer_id, volume_liters=18.0)
+    event = CollectionEvent(farmer_id=farmer_id, center_id=99, volume_liters=18.0)
     
     batch = engine_a.process_farmer_collection(db, event)
     
@@ -45,7 +45,7 @@ def test_farmer_capacity_normal(db):
 def test_farmer_capacity_fraud(db):
     farmer_id = setup_farmer_and_livestock(db, expected_yield=20.0)
     # Expected max is 20 * 1.15 = 23
-    event = CollectionEvent(farmer_id=farmer_id, volume_liters=25.0)
+    event = CollectionEvent(farmer_id=farmer_id, center_id=99, volume_liters=25.0)
     
     engine_a.process_farmer_collection(db, event)
     
@@ -61,7 +61,7 @@ def test_middleman_reconciliation_normal(db):
     db.add_all([b1, b2])
     db.commit()
     
-    event = CenterEvent(center_id=center_id, volume_out_liters=198.0, parent_batch_ids=["b1", "b2"])
+    event = CenterEvent(center_id=center_id, destination_id=100, volume_out_liters=198.0, parent_batch_ids=["b1", "b2"])
     
     batch = engine_a.process_center_forwarding(db, event)
     flags = db.query(models.Flag).all()
@@ -76,7 +76,7 @@ def test_middleman_reconciliation_fraud(db):
     db.commit()
     
     # 100 in, 105 out. Tolerance is 2%, so max is 102
-    event = CenterEvent(center_id=center_id, volume_out_liters=105.0, parent_batch_ids=["b1"])
+    event = CenterEvent(center_id=center_id, destination_id=100, volume_out_liters=105.0, parent_batch_ids=["b1"])
     
     engine_a.process_center_forwarding(db, event)
     flags = db.query(models.Flag).filter_by(flag_type="Output Exceeds Input").all()
@@ -94,7 +94,7 @@ def test_farmer_volume_spike(db):
     db.commit()
     
     # Now sudden spike to 50 (within capacity 100, but anomalous)
-    event = CollectionEvent(farmer_id=farmer_id, volume_liters=50.0)
+    event = CollectionEvent(farmer_id=farmer_id, center_id=99, volume_liters=50.0)
     engine_a.process_farmer_collection(db, event)
     
     flags = db.query(models.Flag).filter_by(flag_type="Volume Spike").all()

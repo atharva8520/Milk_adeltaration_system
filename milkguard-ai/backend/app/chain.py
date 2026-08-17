@@ -56,6 +56,8 @@ def get_pipeline(db: Session, batch_id: str):
         stage_obj = {
             "role": source_user.role.value if source_user.role else "unknown",
             "entity_name": source_user.name or f"{source_user.role.value.capitalize()} #{source_user.id}",
+            "latitude": source_user.latitude,
+            "longitude": source_user.longitude,
             "volume_liters": n.volume_liters,
             "timestamp": n.timestamp.isoformat(),
             "quality": {},

@@ -67,6 +67,7 @@ def seed_data():
         # Ingest collection
         res = requests.post(f"{API_BASE}/engine-a/collection-events", json={
             "farmer_id": farmer_id,
+            "center_id": center_id,
             "volume_liters": vol,
             "collection_date": d
         })
@@ -77,6 +78,7 @@ def seed_data():
         vol_out = round(vol * 0.99, 2)
         requests.post(f"{API_BASE}/engine-a/center-events", json={
             "center_id": center_id,
+            "destination_id": 999, # Dummy destination
             "volume_out_liters": vol_out,
             "collection_date": d,
             "parent_batch_ids": [b_id]
@@ -89,6 +91,7 @@ def seed_data():
     print("Generating Fraudulent Collection Event...")
     res = requests.post(f"{API_BASE}/engine-a/collection-events", json={
         "farmer_id": farmer_id,
+        "center_id": center_id,
         "volume_liters": 80.0,
         "collection_date": datetime.utcnow().strftime("%Y-%m-%d")
     })
@@ -98,6 +101,7 @@ def seed_data():
     print("Generating Fraudulent Center Event...")
     requests.post(f"{API_BASE}/engine-a/center-events", json={
         "center_id": center_id,
+        "destination_id": 999,
         "volume_out_liters": 95.0, # They received 80L, but are outputting 95L!
         "collection_date": datetime.utcnow().strftime("%Y-%m-%d"),
         "parent_batch_ids": [fraud_batch_id]
